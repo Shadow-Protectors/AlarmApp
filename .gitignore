@@ -84,3 +84,7 @@ Thumbs.db
 
 # Graphify Agent / Misc
 graphify-out/
+
+# Plans and Markdown
+plan/
+*.md
