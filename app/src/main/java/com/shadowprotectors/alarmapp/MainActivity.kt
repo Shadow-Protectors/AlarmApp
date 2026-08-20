@@ -9,6 +9,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -46,7 +48,16 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Handle edge-to-edge window insets (status bar and notch padding)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.coordinatorLayout) { _, insets ->
+            val statusBarInsets = insets.getInsets(WindowInsetsCompat.Type.statusBars())
+            binding.appBarLayout.setPadding(0, statusBarInsets.top, 0, 0)
+            insets
+        }
+
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        setupPresetChips()
 
         binding.btnToggleTracking.setOnClickListener {
             if (isTracking) {
@@ -54,6 +65,26 @@ class MainActivity : AppCompatActivity() {
             } else {
                 checkPermissionsAndStart()
             }
+        }
+    }
+
+    private fun setupPresetChips() {
+        binding.chipCentral.setOnClickListener {
+            binding.etLatitude.setText("13.0827")
+            binding.etLongitude.setText("80.2707")
+            Toast.makeText(this, "Selected Chennai Central", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.chipAirport.setOnClickListener {
+            binding.etLatitude.setText("12.9941")
+            binding.etLongitude.setText("80.1709")
+            Toast.makeText(this, "Selected Chennai Airport", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.chipBeach.setOnClickListener {
+            binding.etLatitude.setText("13.0500")
+            binding.etLongitude.setText("80.2824")
+            Toast.makeText(this, "Selected Marina Beach", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -87,8 +118,8 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
-            .setMinUpdateIntervalMillis(3000)
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 4000)
+            .setMinUpdateIntervalMillis(2000)
             .build()
 
         locationCallback = object : LocationCallback() {
@@ -103,6 +134,7 @@ class MainActivity : AppCompatActivity() {
             fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback!!, mainLooper)
             isTracking = true
             binding.tvStatus.text = "GPS Active — Tracking in real-time"
+            binding.statusIndicator.backgroundTintList = ContextCompat.getColorStateList(this, R.color.status_green_text)
             binding.btnToggleTracking.text = "Stop Tracking"
             binding.btnToggleTracking.setBackgroundColor(ContextCompat.getColor(this, R.color.status_red))
             Toast.makeText(this, "Tracking started!", Toast.LENGTH_SHORT).show()
@@ -116,6 +148,7 @@ class MainActivity : AppCompatActivity() {
         isTracking = false
         binding.tvStatus.text = "GPS Idle — Tap Start to track"
         binding.tvDistance.text = "Distance to stop: -- km"
+        binding.statusIndicator.backgroundTintList = ContextCompat.getColorStateList(this, R.color.text_muted)
         binding.btnToggleTracking.text = "Start Destination Alarm"
         binding.btnToggleTracking.setBackgroundColor(ContextCompat.getColor(this, R.color.primary))
         Toast.makeText(this, "Tracking stopped", Toast.LENGTH_SHORT).show()
@@ -131,12 +164,16 @@ class MainActivity : AppCompatActivity() {
 
         if (distanceKm <= 0.5) {
             binding.tvStatus.text = "🚨 Level 3 Alert: Stop is within 500 meters!"
+            binding.statusIndicator.backgroundTintList = ContextCompat.getColorStateList(this, R.color.status_red)
         } else if (distanceKm <= 2.0) {
             binding.tvStatus.text = "⚠️ Level 2 Alert: Approaching stop (within 2 km)"
+            binding.statusIndicator.backgroundTintList = ContextCompat.getColorStateList(this, R.color.status_amber_text)
         } else if (distanceKm <= 5.0) {
             binding.tvStatus.text = "🔔 Level 1 Alert: Within 5 km"
+            binding.statusIndicator.backgroundTintList = ContextCompat.getColorStateList(this, R.color.status_green_text)
         } else {
             binding.tvStatus.text = "Tracking active (On route)"
+            binding.statusIndicator.backgroundTintList = ContextCompat.getColorStateList(this, R.color.status_green_text)
         }
     }
 

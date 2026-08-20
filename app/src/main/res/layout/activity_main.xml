@@ -2,69 +2,125 @@
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/coordinatorLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     android:background="@color/background_light">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary">
+        android:background="@color/primary"
+        app:elevation="4dp">
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/topAppBar"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:title="@string/app_name"
-            app:titleTextColor="@color/white"
-            app:subtitle="Destination Alert App"
-            app:subtitleTextColor="#93C5FD" />
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="14dp">
+
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_alarm"
+                app:tint="@color/white"
+                android:layout_marginEnd="12dp"
+                android:contentDescription="Alarm Icon" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Smart Destination Alarms"
+                    android:textSize="12sp"
+                    android:textColor="#93C5FD" />
+
+            </LinearLayout>
+
+        </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/nestedScrollView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:fillViewport="true"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:padding="16dp">
 
-            <!-- GPS / Status Banner -->
+            <!-- 1. LIVE TRACKING STATUS CARD -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:strokeColor="#E2E8F0"
+                app:strokeColor="@color/card_stroke"
                 app:strokeWidth="1dp"
-                app:cardBackgroundColor="@color/white"
+                app:cardBackgroundColor="@color/surface_card"
                 android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="18dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="TRACKING STATUS"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_secondary" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <View
+                            android:id="@+id/statusIndicator"
+                            android:layout_width="10dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/ic_alarm"
+                            android:backgroundTint="@color/text_muted"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="TRACKING STATUS"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.05"
+                            android:textColor="@color/text_secondary" />
+
+                    </LinearLayout>
 
                     <TextView
                         android:id="@+id/tvStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="6dp"
                         android:text="GPS Idle — Tap Start to track"
-                        android:textSize="18sp"
+                        android:textSize="17sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary" />
 
@@ -72,45 +128,103 @@
                         android:id="@+id/tvDistance"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="4dp"
                         android:text="Distance to stop: -- km"
                         android:textSize="15sp"
+                        android:textStyle="bold"
                         android:textColor="@color/primary_light" />
 
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Destination Card -->
+            <!-- 2. DESTINATION COORDINATES CARD -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:strokeColor="#E2E8F0"
+                app:strokeColor="@color/card_stroke"
                 app:strokeWidth="1dp"
-                app:cardBackgroundColor="@color/white"
+                app:cardBackgroundColor="@color/surface_card"
                 android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="18dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="DESTINATION COORDINATES"
-                        android:textSize="12sp"
+                        android:text="TARGET DESTINATION"
+                        android:textSize="11sp"
                         android:textStyle="bold"
+                        android:letterSpacing="0.05"
                         android:textColor="@color/text_secondary" />
 
+                    <!-- Quick Preset Chips -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Quick Presets (Tap to fill):"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_muted"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginBottom="6dp" />
+
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:scrollbars="none"
+                        android:layout_marginBottom="12dp">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/chipCentral"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:text="🚆 Central Station"
+                                android:textSize="12sp"
+                                android:paddingHorizontal="12dp"
+                                android:layout_marginEnd="8dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/chipAirport"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:text="✈️ Airport"
+                                android:textSize="12sp"
+                                android:paddingHorizontal="12dp"
+                                android:layout_marginEnd="8dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/chipBeach"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:text="📍 Marina Beach"
+                                android:textSize="12sp"
+                                android:paddingHorizontal="12dp" />
+
+                        </LinearLayout>
+
+                    </HorizontalScrollView>
+
+                    <!-- Latitude Field -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:hint="Latitude"
+                        android:hint="Destination Latitude"
+                        app:boxStrokeColor="@color/primary_light"
+                        app:hintTextColor="@color/primary_light"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -118,15 +232,20 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="13.0827"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
                             android:inputType="numberDecimal|numberSigned" />
 
                     </com.google.android.material.textfield.TextInputLayout>
 
+                    <!-- Longitude Field -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="Longitude"
+                        android:layout_marginTop="10dp"
+                        android:hint="Destination Longitude"
+                        app:boxStrokeColor="@color/primary_light"
+                        app:hintTextColor="@color/primary_light"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -134,6 +253,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="80.2707"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
                             android:inputType="numberDecimal|numberSigned" />
 
                     </com.google.android.material.textfield.TextInputLayout>
@@ -142,45 +263,129 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Progressive Alert Levels Card -->
+            <!-- 3. MULTI-LEVEL ALERT BREAKDOWN -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:strokeColor="#E2E8F0"
+                app:strokeColor="@color/card_stroke"
                 app:strokeWidth="1dp"
-                app:cardBackgroundColor="@color/white"
+                app:cardBackgroundColor="@color/surface_card"
                 android:layout_marginBottom="24dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="18dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="MULTI-LEVEL ALERT SYSTEM"
-                        android:textSize="12sp"
+                        android:textSize="11sp"
                         android:textStyle="bold"
-                        android:textColor="@color/text_secondary" />
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_secondary"
+                        android:layout_marginBottom="12dp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <!-- Level 1 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="• Level 1 (5.0 km): Silent notification\n• Level 2 (2.0 km): Gentle vibration\n• Level 3 (0.5 km): Loud Ringtone &amp; Alarm"
-                        android:textSize="14sp"
-                        android:lineSpacingExtra="4dp"
-                        android:textColor="@color/text_primary" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="5.0 km"
+                            android:textStyle="bold"
+                            android:textSize="12sp"
+                            android:textColor="@color/status_green_text"
+                            android:background="@color/status_green_bg"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="3dp"
+                            android:layout_marginEnd="10dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Level 1: Silent Notification (Wake up)"
+                            android:textSize="13sp"
+                            android:textColor="@color/text_primary" />
+
+                    </LinearLayout>
+
+                    <!-- Level 2 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="2.0 km"
+                            android:textStyle="bold"
+                            android:textSize="12sp"
+                            android:textColor="@color/status_amber_text"
+                            android:background="@color/status_amber_bg"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="3dp"
+                            android:layout_marginEnd="10dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Level 2: Vibration Alert (Pack bags)"
+                            android:textSize="13sp"
+                            android:textColor="@color/text_primary" />
+
+                    </LinearLayout>
+
+                    <!-- Level 3 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0.5 km"
+                            android:textStyle="bold"
+                            android:textSize="12sp"
+                            android:textColor="@color/status_red_text"
+                            android:background="@color/status_red_bg"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="3dp"
+                            android:layout_marginEnd="10dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Level 3: Full Alarm &amp; Ringtone"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary" />
+
+                    </LinearLayout>
 
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Action Button -->
+            <!-- 4. ACTION BUTTON -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnToggleTracking"
                 android:layout_width="match_parent"
@@ -188,8 +393,16 @@
                 android:text="Start Destination Alarm"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_alarm"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp"
+                app:cornerRadius="14dp"
+                android:elevation="4dp"
                 android:backgroundTint="@color/primary" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="32dp" />
 
         </LinearLayout>
 
