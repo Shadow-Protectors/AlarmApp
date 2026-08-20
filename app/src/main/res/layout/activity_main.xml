@@ -171,7 +171,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="• Level 1 (5.0 km): Silent notification\n• Level 2 (2.0 km): Gentle vibration\n• Level 3 (0.5 km): Loud Ringtone & Alarm"
+                        android:text="• Level 1 (5.0 km): Silent notification\n• Level 2 (2.0 km): Gentle vibration\n• Level 3 (0.5 km): Loud Ringtone &amp; Alarm"
                         android:textSize="14sp"
                         android:lineSpacingExtra="4dp"
                         android:textColor="@color/text_primary" />
