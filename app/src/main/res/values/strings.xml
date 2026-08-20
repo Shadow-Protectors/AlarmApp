@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">TravelAlarm</string>
+    <string name="set_destination">Set Destination</string>
+    <string name="start_trip">Start Tracking</string>
+    <string name="stop_trip">Stop Tracking</string>
+    <string name="status_idle">GPS Idle — Ready to set destination</string>
+    <string name="status_tracking">Tracking active — Monitoring distance</string>
+</resources>
