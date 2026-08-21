@@ -48,7 +48,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Smart Destination Alarms"
+                    android:text="Offline Destination &amp; Sleep Alert"
                     android:textSize="12sp"
                     android:textColor="#93C5FD" />
 
@@ -73,6 +73,7 @@
 
             <!-- 1. LIVE TRACKING STATUS CARD -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardTrackingStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
@@ -103,14 +104,27 @@
                             android:layout_marginEnd="8dp" />
 
                         <TextView
+                            android:id="@+id/tvStatusHeader"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="TRACKING STATUS"
+                            android:text="LIVE STATUS"
                             android:textSize="11sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.05"
                             android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:id="@+id/tvApproachBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Idle"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:textColor="@color/text_secondary"
+                            android:background="@color/background_light" />
 
                     </LinearLayout>
 
@@ -119,8 +133,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="GPS Idle — Tap Start to track"
-                        android:textSize="17sp"
+                        android:text="GPS Idle — Tap Start to track in background"
+                        android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary" />
 
@@ -130,15 +144,42 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:text="Distance to stop: -- km"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="@color/primary_light" />
+
+                    <!-- Speed & ETA telemetry row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:id="@+id/tvSpeed"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Speed: -- km/h"
+                            android:textSize="13sp"
+                            android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:id="@+id/tvEta"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="ETA: --"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/primary" />
+
+                    </LinearLayout>
 
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 2. DESTINATION COORDINATES CARD -->
+            <!-- 2. DESTINATION SELECTION & PRESETS -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -158,39 +199,42 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="TARGET DESTINATION"
+                        android:text="SELECT DESTINATION"
                         android:textSize="11sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.05"
                         android:textColor="@color/text_secondary" />
 
                     <!-- Quick Preset Chips -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Quick Presets (Tap to fill):"
-                        android:textSize="12sp"
-                        android:textColor="@color/text_muted"
-                        android:layout_marginTop="10dp"
-                        android:layout_marginBottom="6dp" />
-
                     <HorizontalScrollView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:scrollbars="none"
+                        android:layout_marginTop="10dp"
                         android:layout_marginBottom="12dp">
 
                         <LinearLayout
+                            android:id="@+id/presetsContainer"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/chipMadurai"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:text="🚆 Madurai Junction"
+                                android:textSize="12sp"
+                                android:paddingHorizontal="12dp"
+                                android:layout_marginEnd="8dp" />
 
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/chipCentral"
                                 android:layout_width="wrap_content"
                                 android:layout_height="36dp"
                                 style="@style/Widget.Material3.Button.TonalButton"
-                                android:text="🚆 Central Station"
+                                android:text="🚆 Chennai Central"
                                 android:textSize="12sp"
                                 android:paddingHorizontal="12dp"
                                 android:layout_marginEnd="8dp" />
@@ -200,17 +244,17 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="36dp"
                                 style="@style/Widget.Material3.Button.TonalButton"
-                                android:text="✈️ Airport"
+                                android:text="✈️ Chennai Airport"
                                 android:textSize="12sp"
                                 android:paddingHorizontal="12dp"
                                 android:layout_marginEnd="8dp" />
 
                             <com.google.android.material.button.MaterialButton
-                                android:id="@+id/chipBeach"
+                                android:id="@+id/chipCoimbatore"
                                 android:layout_width="wrap_content"
                                 android:layout_height="36dp"
                                 style="@style/Widget.Material3.Button.TonalButton"
-                                android:text="📍 Marina Beach"
+                                android:text="🚆 Coimbatore"
                                 android:textSize="12sp"
                                 android:paddingHorizontal="12dp" />
 
@@ -218,11 +262,31 @@
 
                     </HorizontalScrollView>
 
+                    <!-- Destination Name Input -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Destination Name / Stop"
+                        app:boxStrokeColor="@color/primary_light"
+                        app:hintTextColor="@color/primary_light"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etDestName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Madurai Junction"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
                     <!-- Latitude Field -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Destination Latitude"
+                        android:layout_marginTop="8dp"
+                        android:hint="Latitude"
                         app:boxStrokeColor="@color/primary_light"
                         app:hintTextColor="@color/primary_light"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
@@ -231,7 +295,7 @@
                             android:id="@+id/etLatitude"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="13.0827"
+                            android:text="9.9196"
                             android:textColor="@color/text_primary"
                             android:textSize="15sp"
                             android:inputType="numberDecimal|numberSigned" />
@@ -242,8 +306,8 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:hint="Destination Longitude"
+                        android:layout_marginTop="8dp"
+                        android:hint="Longitude"
                         app:boxStrokeColor="@color/primary_light"
                         app:hintTextColor="@color/primary_light"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
@@ -252,7 +316,7 @@
                             android:id="@+id/etLongitude"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="80.2707"
+                            android:text="78.1100"
                             android:textColor="@color/text_primary"
                             android:textSize="15sp"
                             android:inputType="numberDecimal|numberSigned" />
@@ -263,7 +327,74 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 3. MULTI-LEVEL ALERT BREAKDOWN -->
+            <!-- 3. VOICE LANGUAGE SETTINGS CARD -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/card_stroke"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="@color/surface_card"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="VOICE ALERT LANGUAGE (REGIONAL TTS)"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_secondary" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="10dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnLangEnglish"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:text="English"
+                            android:textSize="12sp"
+                            android:layout_marginEnd="6dp"
+                            android:backgroundTint="@color/primary" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnLangTamil"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:text="தமிழ்"
+                            android:textSize="12sp"
+                            android:layout_marginEnd="6dp"
+                            style="@style/Widget.Material3.Button.TonalButton" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnLangHindi"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:text="हिन्दी"
+                            android:textSize="12sp"
+                            style="@style/Widget.Material3.Button.TonalButton" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 4. MULTI-LEVEL ALERT BREAKDOWN -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -283,7 +414,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="MULTI-LEVEL ALERT SYSTEM"
+                        android:text="PROGRESSIVE ALERT STAGES"
                         android:textSize="11sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.05"
@@ -296,7 +427,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingVertical="6dp">
+                        android:paddingVertical="4dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -307,7 +438,7 @@
                             android:textColor="@color/status_green_text"
                             android:background="@color/status_green_bg"
                             android:paddingHorizontal="8dp"
-                            android:paddingVertical="3dp"
+                            android:paddingVertical="2dp"
                             android:layout_marginEnd="10dp" />
 
                         <TextView
@@ -326,7 +457,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingVertical="6dp">
+                        android:paddingVertical="4dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -337,14 +468,14 @@
                             android:textColor="@color/status_amber_text"
                             android:background="@color/status_amber_bg"
                             android:paddingHorizontal="8dp"
-                            android:paddingVertical="3dp"
+                            android:paddingVertical="2dp"
                             android:layout_marginEnd="10dp" />
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Level 2: Vibration Alert (Pack bags)"
+                            android:text="Level 2: Vibration Pulse (Pack bags)"
                             android:textSize="13sp"
                             android:textColor="@color/text_primary" />
 
@@ -356,7 +487,37 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingVertical="6dp">
+                        android:paddingVertical="4dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="1.0 km"
+                            android:textStyle="bold"
+                            android:textSize="12sp"
+                            android:textColor="#4338CA"
+                            android:background="#E0E7FF"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:layout_marginEnd="10dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Level 3: Voice TTS in Selected Language"
+                            android:textSize="13sp"
+                            android:textColor="@color/text_primary" />
+
+                    </LinearLayout>
+
+                    <!-- Level 4 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="4dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -367,14 +528,14 @@
                             android:textColor="@color/status_red_text"
                             android:background="@color/status_red_bg"
                             android:paddingHorizontal="8dp"
-                            android:paddingVertical="3dp"
+                            android:paddingVertical="2dp"
                             android:layout_marginEnd="10dp" />
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Level 3: Full Alarm &amp; Ringtone"
+                            android:text="Level 4: Full Wake Alarm &amp; Max Ringtone"
                             android:textSize="13sp"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary" />
@@ -385,13 +546,13 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 4. ACTION BUTTON -->
+            <!-- 5. ACTION BUTTON -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnToggleTracking"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:text="Start Destination Alarm"
-                android:textSize="16sp"
+                android:text="Start Background Destination Alarm"
+                android:textSize="15sp"
                 android:textStyle="bold"
                 app:icon="@drawable/ic_alarm"
                 app:iconGravity="textStart"
