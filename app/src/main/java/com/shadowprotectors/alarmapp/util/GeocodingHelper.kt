@@ -95,6 +95,58 @@ class GeocodingHelper(private val context: Context) {
         }
     }
 
+    suspend fun getLandmarkConfirmation(latitude: Double, longitude: Double): String {
+        return withContext(Dispatchers.IO) {
+            if (!Geocoder.isPresent()) {
+                return@withContext "Coordinates: ${String.format(Locale.US, "%.4f, %.4f", latitude, longitude)}"
+            }
+
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    suspendCoroutine { continuation ->
+                        geocoder.getFromLocation(latitude, longitude, 1, object : Geocoder.GeocodeListener {
+                            override fun onGeocode(addresses: MutableList<Address>) {
+                                if (addresses.isNotEmpty()) {
+                                    continuation.resume(formatLandmarkText(addresses[0]))
+                                } else {
+                                    continuation.resume("GPS Coordinates: ${String.format(Locale.US, "%.4f, %.4f", latitude, longitude)}")
+                                }
+                            }
+
+                            override fun onError(errorMessage: String?) {
+                                continuation.resume("GPS Coordinates: ${String.format(Locale.US, "%.4f, %.4f", latitude, longitude)}")
+                            }
+                        })
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    val addresses = geocoder.getFromLocation(latitude, longitude, 1)
+                    if (!addresses.isNullOrEmpty()) {
+                        formatLandmarkText(addresses[0])
+                    } else {
+                        "GPS Coordinates: ${String.format(Locale.US, "%.4f, %.4f", latitude, longitude)}"
+                    }
+                }
+            } catch (e: Exception) {
+                "GPS Coordinates: ${String.format(Locale.US, "%.4f, %.4f", latitude, longitude)}"
+            }
+        }
+    }
+
+    private fun formatLandmarkText(addr: Address): String {
+        val landmarks = listOfNotNull(
+            addr.featureName?.takeIf { it != addr.subLocality && it != addr.locality && !it.matches(Regex("^[0-9\\-]+$")) },
+            addr.thoroughfare?.let { "on $it" },
+            addr.subLocality?.let { "near $it" },
+            addr.locality
+        )
+        return if (landmarks.isNotEmpty()) {
+            landmarks.distinct().joinToString(", ")
+        } else {
+            addr.getAddressLine(0) ?: "Identified Area"
+        }
+    }
+
     private fun addressToSearchResult(addr: Address): PlaceSearchResult {
         val title = addr.featureName ?: addr.subLocality ?: addr.locality ?: "Location"
         val subtitleParts = listOfNotNull(

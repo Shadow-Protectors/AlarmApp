@@ -17,9 +17,11 @@
     <color name="text_muted">#94A3B8</color>
 
     <!-- Alert & Status Levels -->
+    <color name="status_green">#16A34A</color>
     <color name="status_green_bg">#DCFCE7</color>
     <color name="status_green_text">#15803D</color>
     
+    <color name="status_amber">#D97706</color>
     <color name="status_amber_bg">#FEF3C7</color>
     <color name="status_amber_text">#B45309</color>
     

@@ -1,37 +1,52 @@
 package com.shadowprotectors.alarmapp
 
 import android.Manifest
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.shadowprotectors.alarmapp.alert.AlertLevel
 import com.shadowprotectors.alarmapp.data.DatabaseHelper
+import com.shadowprotectors.alarmapp.data.Destination
 import com.shadowprotectors.alarmapp.databinding.ActivityMainBinding
+import com.shadowprotectors.alarmapp.databinding.DialogImportLinkBinding
 import com.shadowprotectors.alarmapp.engine.ApproachState
 import com.shadowprotectors.alarmapp.service.LocationTrackingService
 import com.shadowprotectors.alarmapp.service.ServiceEventBus
 import com.shadowprotectors.alarmapp.service.TrackingState
+import com.shadowprotectors.alarmapp.ui.MapPickerBottomSheet
+import com.shadowprotectors.alarmapp.util.GeocodingHelper
+import com.shadowprotectors.alarmapp.util.LocationLinkParser
+import com.shadowprotectors.alarmapp.util.ParsedLocation
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
-
-import com.shadowprotectors.alarmapp.data.Destination
-import com.shadowprotectors.alarmapp.ui.MapPickerBottomSheet
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var databaseHelper: DatabaseHelper
+    private lateinit var geocodingHelper: GeocodingHelper
     private var selectedLanguageCode = "en"
     private var isCurrentlyTracking = false
 
@@ -54,6 +69,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         databaseHelper = DatabaseHelper(this)
+        geocodingHelper = GeocodingHelper(this)
 
         // Handle edge-to-edge status bar insets properly
         ViewCompat.setOnApplyWindowInsetsListener(binding.coordinatorLayout) { _, insets ->
@@ -66,31 +82,90 @@ class MainActivity : AppCompatActivity() {
         setupLanguageButtons()
         setupListeners()
         observeTrackingState()
+
+        // Handle shared location links from WhatsApp or Maps
+        handleIncomingIntent(intent)
+
+        // Initial landmark confirmation for default location
+        updateLandmarkConfirmation(9.9196, 78.1100)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingIntent(intent)
+    }
+
+    private fun handleIncomingIntent(intent: Intent?) {
+        if (intent == null) return
+
+        when (intent.action) {
+            Intent.ACTION_SEND -> {
+                val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+                if (!sharedText.isNullOrBlank()) {
+                    importSharedLocation(sharedText)
+                }
+            }
+            Intent.ACTION_VIEW -> {
+                val dataUri = intent.dataString
+                if (!dataUri.isNullOrBlank()) {
+                    importSharedLocation(dataUri)
+                }
+            }
+        }
+    }
+
+    private fun importSharedLocation(rawInput: String) {
+        lifecycleScope.launch {
+            Toast.makeText(this@MainActivity, "Parsing shared destination...", Toast.LENGTH_SHORT).show()
+            val parsed = LocationLinkParser.parse(rawInput)
+            if (parsed != null) {
+                val resolvedName = geocodingHelper.reverseGeocode(parsed.latitude, parsed.longitude)
+                setDestination(resolvedName, parsed.latitude, parsed.longitude)
+                Toast.makeText(this@MainActivity, "Destination set to: $resolvedName", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this@MainActivity, "Could not extract coordinates from link", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun setDestination(name: String, lat: Double, lng: Double) {
+        binding.etDestName.setText(name)
+        binding.etLatitude.setText(String.format(Locale.US, "%.5f", lat))
+        binding.etLongitude.setText(String.format(Locale.US, "%.5f", lng))
+
+        // Save to SQLite database
+        databaseHelper.insertDestination(
+            Destination(name = name, latitude = lat, longitude = lng, isPreset = false)
+        )
+
+        // Update landmark confirmation
+        updateLandmarkConfirmation(lat, lng)
+    }
+
+    private fun updateLandmarkConfirmation(lat: Double, lng: Double) {
+        lifecycleScope.launch {
+            val landmarkText = geocodingHelper.getLandmarkConfirmation(lat, lng)
+            binding.tvLandmarkConfirmation.text = "📍 Verified: $landmarkText"
+            binding.cardLandmarkConfirmation.isVisible = true
+        }
     }
 
     private fun setupPresetChips() {
         binding.chipMadurai.setOnClickListener {
-            binding.etDestName.setText("Madurai Junction")
-            binding.etLatitude.setText("9.9196")
-            binding.etLongitude.setText("78.1100")
+            setDestination("Madurai Junction", 9.9196, 78.1100)
         }
 
         binding.chipCentral.setOnClickListener {
-            binding.etDestName.setText("Chennai Central")
-            binding.etLatitude.setText("13.0827")
-            binding.etLongitude.setText("80.2707")
+            setDestination("Chennai Central", 13.0827, 80.2707)
         }
 
         binding.chipAirport.setOnClickListener {
-            binding.etDestName.setText("Chennai Airport")
-            binding.etLatitude.setText("12.9941")
-            binding.etLongitude.setText("80.1709")
+            setDestination("Chennai Airport", 12.9941, 80.1709)
         }
 
         binding.chipCoimbatore.setOnClickListener {
-            binding.etDestName.setText("Coimbatore Junction")
-            binding.etLatitude.setText("10.9972")
-            binding.etLongitude.setText("76.9634")
+            setDestination("Coimbatore Junction", 10.9972, 76.9634)
         }
     }
 
@@ -119,25 +194,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
+        // 1. In-App Map Picker
         binding.btnOpenMapPicker.setOnClickListener {
             val mapPicker = MapPickerBottomSheet.newInstance()
             mapPicker.setOnDestinationSelectedListener(object : MapPickerBottomSheet.OnDestinationSelectedListener {
                 override fun onDestinationSelected(name: String, latitude: Double, longitude: Double) {
-                    binding.etDestName.setText(name)
-                    binding.etLatitude.setText(String.format(Locale.US, "%.5f", latitude))
-                    binding.etLongitude.setText(String.format(Locale.US, "%.5f", longitude))
-
-                    // Persist to local SQLite history
-                    databaseHelper.insertDestination(
-                        Destination(name = name, latitude = latitude, longitude = longitude, isPreset = false)
-                    )
-
+                    setDestination(name, latitude, longitude)
                     Toast.makeText(this@MainActivity, "Destination set: $name", Toast.LENGTH_SHORT).show()
                 }
             })
             mapPicker.show(supportFragmentManager, MapPickerBottomSheet.TAG)
         }
 
+        // 2. Paste / Import Maps Link Dialog
+        binding.btnImportLink.setOnClickListener {
+            showImportLinkDialog()
+        }
+
+        // 3. Toggle Tracking Button
         binding.btnToggleTracking.setOnClickListener {
             if (isCurrentlyTracking) {
                 stopTrackingService()
@@ -145,6 +219,99 @@ class MainActivity : AppCompatActivity() {
                 checkPermissionsAndStart()
             }
         }
+    }
+
+    private fun showImportLinkDialog() {
+        val dialogBinding = DialogImportLinkBinding.inflate(LayoutInflater.from(this))
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogBinding.root)
+            .create()
+
+        var parseJob: Job? = null
+        var resolvedLocation: ParsedLocation? = null
+        var resolvedName: String? = null
+
+        // Auto-check clipboard
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clipData = clipboard.primaryClip
+        if (clipData != null && clipData.itemCount > 0) {
+            val clipText = clipData.getItemAt(0).text?.toString() ?: ""
+            if (clipText.contains("http") || clipText.contains("geo:") || clipText.matches(Regex(".*\\d+\\.\\d+.*"))) {
+                dialogBinding.etLinkInput.setText(clipText)
+            }
+        }
+
+        fun triggerParse(input: String) {
+            parseJob?.cancel()
+            val text = input.trim()
+            if (text.isEmpty()) {
+                dialogBinding.layoutParsingStatus.isVisible = false
+                dialogBinding.cardResolvedPreview.isVisible = false
+                return
+            }
+
+            dialogBinding.layoutParsingStatus.isVisible = true
+            dialogBinding.tvParsingStatus.text = "Resolving link coordinates..."
+            dialogBinding.cardResolvedPreview.isVisible = false
+
+            parseJob = lifecycleScope.launch {
+                delay(300)
+                val parsed = LocationLinkParser.parse(text)
+                if (parsed != null) {
+                    resolvedLocation = parsed
+                    val name = geocodingHelper.reverseGeocode(parsed.latitude, parsed.longitude)
+                    resolvedName = name
+
+                    dialogBinding.layoutParsingStatus.isVisible = false
+                    dialogBinding.tvResolvedTitle.text = name
+                    dialogBinding.tvResolvedCoords.text = String.format(Locale.US, "Lat: %.5f, Lng: %.5f", parsed.latitude, parsed.longitude)
+                    dialogBinding.cardResolvedPreview.isVisible = true
+                } else {
+                    dialogBinding.layoutParsingStatus.isVisible = true
+                    dialogBinding.tvParsingStatus.text = "No coordinates found in link"
+                }
+            }
+        }
+
+        dialogBinding.btnPasteClipboard.setOnClickListener {
+            val clip = clipboard.primaryClip
+            if (clip != null && clip.itemCount > 0) {
+                val clipText = clip.getItemAt(0).text?.toString() ?: ""
+                dialogBinding.etLinkInput.setText(clipText)
+            }
+        }
+
+        dialogBinding.etLinkInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                triggerParse(s?.toString() ?: "")
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        // Initial parse if clipboard auto-filled
+        val currentInput = dialogBinding.etLinkInput.text?.toString() ?: ""
+        if (currentInput.isNotEmpty()) {
+            triggerParse(currentInput)
+        }
+
+        dialogBinding.btnCancelImport.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialogBinding.btnConfirmImport.setOnClickListener {
+            val location = resolvedLocation
+            if (location != null) {
+                val name = resolvedName ?: "Imported Stop"
+                setDestination(name, location.latitude, location.longitude)
+                Toast.makeText(this, "Destination set: $name", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            } else {
+                Toast.makeText(this, "Please paste a valid Google Maps link or coordinates", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        dialog.show()
     }
 
     private fun checkPermissionsAndStart() {

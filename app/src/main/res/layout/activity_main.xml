@@ -205,20 +205,84 @@
                         android:letterSpacing="0.05"
                         android:textColor="@color/text_secondary" />
 
-                    <!-- Primary In-App Map & Place Search Button -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnOpenMapPicker"
+                    <!-- Destination Selection Action Buttons -->
+                    <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="52dp"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="12dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnOpenMapPicker"
+                            android:layout_width="0dp"
+                            android:layout_height="52dp"
+                            android:layout_weight="1"
+                            android:text="🔍 Pick on Map"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            app:icon="@drawable/ic_location"
+                            app:iconGravity="textStart"
+                            app:iconPadding="4dp"
+                            app:cornerRadius="12dp"
+                            android:layout_marginEnd="6dp"
+                            android:backgroundTint="@color/primary_light" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnImportLink"
+                            android:layout_width="0dp"
+                            android:layout_height="52dp"
+                            android:layout_weight="1"
+                            android:text="📥 Paste Link"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            app:icon="@drawable/ic_alarm"
+                            app:iconGravity="textStart"
+                            app:iconPadding="4dp"
+                            app:cornerRadius="12dp"
+                            style="@style/Widget.Material3.Button.TonalButton" />
+
+                    </LinearLayout>
+
+                    <!-- Landmark Confirmation Preview Badge -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardLandmarkConfirmation"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="🔍 Search Place or Pick on Map"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        app:icon="@drawable/ic_location"
-                        app:iconGravity="textStart"
-                        app:iconPadding="8dp"
-                        app:cornerRadius="12dp"
-                        android:backgroundTint="@color/primary_light" />
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/status_green"
+                        app:strokeWidth="1dp"
+                        app:cardBackgroundColor="@color/status_green_bg">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="10dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_location"
+                                app:tint="@color/status_green_text"
+                                android:layout_marginEnd="8dp"
+                                android:contentDescription="Verified Landmark Icon" />
+
+                            <TextView
+                                android:id="@+id/tvLandmarkConfirmation"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="📍 Verified: Near Madurai Junction Clock Tower"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/status_green_text" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
 
                     <!-- Quick Preset Chips -->
                     <TextView
