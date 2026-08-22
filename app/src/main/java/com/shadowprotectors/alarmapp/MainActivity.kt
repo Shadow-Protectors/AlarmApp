@@ -25,6 +25,9 @@ import com.shadowprotectors.alarmapp.service.TrackingState
 import kotlinx.coroutines.launch
 import java.util.Locale
 
+import com.shadowprotectors.alarmapp.data.Destination
+import com.shadowprotectors.alarmapp.ui.MapPickerBottomSheet
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -116,6 +119,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
+        binding.btnOpenMapPicker.setOnClickListener {
+            val mapPicker = MapPickerBottomSheet.newInstance()
+            mapPicker.setOnDestinationSelectedListener(object : MapPickerBottomSheet.OnDestinationSelectedListener {
+                override fun onDestinationSelected(name: String, latitude: Double, longitude: Double) {
+                    binding.etDestName.setText(name)
+                    binding.etLatitude.setText(String.format(Locale.US, "%.5f", latitude))
+                    binding.etLongitude.setText(String.format(Locale.US, "%.5f", longitude))
+
+                    // Persist to local SQLite history
+                    databaseHelper.insertDestination(
+                        Destination(name = name, latitude = latitude, longitude = longitude, isPreset = false)
+                    )
+
+                    Toast.makeText(this@MainActivity, "Destination set: $name", Toast.LENGTH_SHORT).show()
+                }
+            })
+            mapPicker.show(supportFragmentManager, MapPickerBottomSheet.TAG)
+        }
+
         binding.btnToggleTracking.setOnClickListener {
             if (isCurrentlyTracking) {
                 stopTrackingService()
