@@ -436,8 +436,7 @@ class MainActivity : AppCompatActivity() {
 
             binding.tvStatus.text = "Tracking to ${state.destinationName}"
             binding.tvDistance.text = String.format(Locale.US, "Distance to stop: %.2f km", state.distanceKm)
-            binding.tvSpeed.text = String.format(Locale.US, "Speed: %.1f km/h", state.speedKmh)
-            binding.tvEta.text = if (state.etaMinutes != null) "ETA: ~${state.etaMinutes} mins" else "ETA: Calculating..."
+            binding.tvEta.text = formatEta(state.etaMinutes, state.speedKmh)
 
             // Approach state badge
             when (state.approachState) {
@@ -494,13 +493,33 @@ class MainActivity : AppCompatActivity() {
 
             binding.tvStatus.text = "GPS Idle — Tap Start to track in background"
             binding.tvDistance.text = "Distance to stop: -- km"
-            binding.tvSpeed.text = "Speed: -- km/h"
-            binding.tvEta.text = "ETA: --"
+            binding.tvEta.text = "Waiting to start…"
             binding.tvApproachBadge.text = "Idle"
             binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
             binding.tvApproachBadge.setBackgroundColor(Color.parseColor("#E2E8F0"))
             binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.surface_card))
             binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+        }
+    }
+
+    /**
+     * Returns a clean, human-readable ETA string for passengers.
+     * Raw speed is never shown on UI — it is used only internally here to detect
+     * if the vehicle is stationary (GPS jitter at < 2 km/h).
+     */
+    private fun formatEta(etaMinutes: Int?, speedKmh: Double): String {
+        if (etaMinutes == null) {
+            return if (speedKmh < 2.0) "Waiting to depart…" else "Calculating…"
+        }
+        return when {
+            etaMinutes < 1    -> "Arriving now!"
+            etaMinutes < 60   -> "~${etaMinutes} mins away"
+            else -> {
+                val hrs  = etaMinutes / 60
+                val mins = etaMinutes % 60
+                if (mins == 0) "~${hrs} hr${if (hrs > 1) "s" else ""}"
+                else           "~${hrs} hr${if (hrs > 1) "s" else ""} ${mins} mins"
+            }
         }
     }
 }
