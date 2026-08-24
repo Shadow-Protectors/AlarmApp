@@ -33,6 +33,7 @@ class AlarmTriggerActivity : AppCompatActivity() {
 
         binding.btnDismissAlarm.setOnClickListener {
             LocationTrackingService.stopAlarm(this)
+            com.shadowprotectors.alarmapp.alert.AudioAlarmHelper(this).stopFullAlarm()
             finish()
         }
     }

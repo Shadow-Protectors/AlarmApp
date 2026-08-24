@@ -635,7 +635,7 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 5. ACTION BUTTON -->
+            <!-- 5. ACTION BUTTONS -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnToggleTracking"
                 android:layout_width="match_parent"
@@ -649,6 +649,20 @@
                 app:cornerRadius="14dp"
                 android:elevation="4dp"
                 android:backgroundTint="@color/primary" />
+
+            <!-- Test / Preview Alarm Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTestAlarm"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="10dp"
+                android:text="🧪 Test Alarm Siren, Voice &amp; Screen"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                app:cornerRadius="12dp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:textColor="@color/primary"
+                app:strokeColor="@color/primary" />
 
             <View
                 android:layout_width="match_parent"

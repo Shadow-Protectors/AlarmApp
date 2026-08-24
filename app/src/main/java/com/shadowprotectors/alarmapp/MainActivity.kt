@@ -219,6 +219,32 @@ class MainActivity : AppCompatActivity() {
                 checkPermissionsAndStart()
             }
         }
+
+        // 4. Test / Preview Alarm Button
+        binding.btnTestAlarm.setOnClickListener {
+            val destName = binding.etDestName.text.toString().trim().ifEmpty { "Madurai Junction" }
+            
+            // 1. Play Voice TTS in chosen language
+            val voiceAlertHelper = com.shadowprotectors.alarmapp.alert.VoiceAlertHelper(this)
+            voiceAlertHelper.currentLanguage = when (selectedLanguageCode) {
+                "ta" -> com.shadowprotectors.alarmapp.alert.SupportedLanguage.TAMIL
+                "hi" -> com.shadowprotectors.alarmapp.alert.SupportedLanguage.HINDI
+                else -> com.shadowprotectors.alarmapp.alert.SupportedLanguage.ENGLISH
+            }
+            voiceAlertHelper.speakApproachAlert(destName, 0.5)
+
+            // 2. Play Alarm Sound + Vibration
+            val audioHelper = com.shadowprotectors.alarmapp.alert.AudioAlarmHelper(this)
+            audioHelper.startFullAlarm()
+
+            // 3. Launch Full-Screen Wake Activity
+            val triggerIntent = Intent(this, com.shadowprotectors.alarmapp.ui.AlarmTriggerActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(com.shadowprotectors.alarmapp.ui.AlarmTriggerActivity.EXTRA_DEST_NAME, destName)
+                putExtra(com.shadowprotectors.alarmapp.ui.AlarmTriggerActivity.EXTRA_DISTANCE_KM, 0.5)
+            }
+            startActivity(triggerIntent)
+        }
     }
 
     private fun showImportLinkDialog() {
