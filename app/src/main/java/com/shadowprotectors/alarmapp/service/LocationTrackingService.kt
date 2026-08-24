@@ -84,6 +84,13 @@ class LocationTrackingService : Service() {
     private var destLat = 0.0
     private var destLng = 0.0
 
+    // Cached once at start — never changes during a tracking session
+    private var stopPendingIntent: PendingIntent? = null
+
+    // Guards: skip notification/UI emit if nothing meaningful changed
+    private var lastNotifiedDistanceKm = Double.MAX_VALUE
+    private var lastEmittedState: TrackingState? = null
+
     override fun onCreate() {
         super.onCreate()
         NotificationHelper.createNotificationChannels(this)
@@ -131,10 +138,11 @@ class LocationTrackingService : Service() {
         wakeLock?.acquire(10 * 60 * 60 * 1000L /* 10 hours max */)
 
         val stopIntent = Intent(this, LocationTrackingService::class.java).apply { action = ACTION_STOP }
-        val stopPendingIntent = PendingIntent.getService(this, 2, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        // Assign to class-level property so handleLocationUpdate() can reuse it without per-tick allocation
+        stopPendingIntent = PendingIntent.getService(this, 2, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
         val initialNotification = NotificationHelper.buildTrackingNotification(
-            this, destinationName, 0.0, null, stopPendingIntent
+            this, destinationName, 0.0, null, stopPendingIntent!!
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -150,6 +158,9 @@ class LocationTrackingService : Service() {
 
         alertManager.reset()
         directionFilter.reset()
+        lastNotifiedDistanceKm = Double.MAX_VALUE
+        lastEmittedState = null
+
 
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
             .setMinUpdateIntervalMillis(2000)
@@ -201,15 +212,18 @@ class LocationTrackingService : Service() {
         val approachState = directionFilter.evaluateApproach(distanceKm, userBearing, targetBearing)
         val alertLevel = alertManager.processDistance(distanceKm, approachState, destinationName)
 
-        // 1. Update Foreground Persistent Notification
-        val stopIntent = Intent(this, LocationTrackingService::class.java).apply { action = ACTION_STOP }
-        val stopPendingIntent = PendingIntent.getService(this, 2, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-
-        val notification = NotificationHelper.buildTrackingNotification(
-            this, destinationName, distanceKm, etaMinutes, stopPendingIntent
-        )
+        // 1. Update Foreground Persistent Notification — only when distance changed by > 100 m
+        //    Saves ~10–12 Binder IPC calls per minute when vehicle is stationary or crawling.
+        val pendingIntent = stopPendingIntent!!
+        if (Math.abs(distanceKm - lastNotifiedDistanceKm) > 0.1 || lastNotifiedDistanceKm == Double.MAX_VALUE) {
+            lastNotifiedDistanceKm = distanceKm
+            val notification = NotificationHelper.buildTrackingNotification(
+                this, destinationName, distanceKm, etaMinutes, pendingIntent
+            )
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.notify(NotificationHelper.NOTIFICATION_TRACKING_ID, notification)
+        }
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(NotificationHelper.NOTIFICATION_TRACKING_ID, notification)
 
         // 2. If Level 4 is reached and not dismissed by user, trigger full-screen alarm notification and launch AlarmTriggerActivity
         if (alertLevel == AlertLevel.LEVEL_4_FULL_ALARM && !alertManager.isAlarmDismissedByUser) {
@@ -230,22 +244,31 @@ class LocationTrackingService : Service() {
             startActivity(alarmActivityIntent)
         }
 
-        // 3. Broadcast to UI EventBus
-        ServiceEventBus.updateState(
-            TrackingState(
-                isTracking = true,
-                destinationName = destinationName,
-                destLat = destLat,
-                destLng = destLng,
-                currentLat = location.latitude,
-                currentLng = location.longitude,
-                distanceKm = distanceKm,
-                speedKmh = speedKmh,
-                etaMinutes = etaMinutes,
-                approachState = approachState,
-                alertLevel = alertLevel
-            )
+        // 3. Broadcast to UI EventBus — only when state meaningfully changed
+        //    Avoids redundant StateFlow emissions and UI redraws when screen is off.
+        val newState = TrackingState(
+            isTracking = true,
+            destinationName = destinationName,
+            destLat = destLat,
+            destLng = destLng,
+            currentLat = location.latitude,
+            currentLng = location.longitude,
+            distanceKm = distanceKm,
+            speedKmh = speedKmh,
+            etaMinutes = etaMinutes,
+            approachState = approachState,
+            alertLevel = alertLevel
         )
+        val prev = lastEmittedState
+        val significantChange = prev == null
+            || Math.abs(newState.distanceKm - prev.distanceKm) > 0.05
+            || newState.etaMinutes != prev.etaMinutes
+            || newState.approachState != prev.approachState
+            || newState.alertLevel != prev.alertLevel
+        if (significantChange) {
+            lastEmittedState = newState
+            ServiceEventBus.updateState(newState)
+        }
     }
 
     private fun stopForegroundTracking() {
