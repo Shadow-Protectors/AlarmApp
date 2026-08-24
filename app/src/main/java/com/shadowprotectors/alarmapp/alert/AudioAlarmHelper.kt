@@ -2,7 +2,6 @@ package com.shadowprotectors.alarmapp.alert
 
 import android.content.Context
 import android.media.AudioAttributes
-import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
@@ -12,13 +11,15 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
 
-class AudioAlarmHelper(private val context: Context) {
+object AudioAlarmHelper {
 
+    @Volatile
     private var mediaPlayer: MediaPlayer? = null
+    @Volatile
     private var isAlarmPlaying = false
 
-    private val vibrator: Vibrator by lazy {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    private fun getVibrator(context: Context): Vibrator {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager.defaultVibrator
         } else {
@@ -30,7 +31,9 @@ class AudioAlarmHelper(private val context: Context) {
     /**
      * Triggers Level 2 vibration pulse (gentle alert).
      */
-    fun playLevel2Vibration() {
+    @Synchronized
+    fun playLevel2Vibration(context: Context) {
+        val vibrator = getVibrator(context)
         val pattern = longArrayOf(0, 500, 200, 500)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
@@ -43,11 +46,13 @@ class AudioAlarmHelper(private val context: Context) {
     /**
      * Starts continuous high-priority loud alarm loop + intense vibration.
      */
-    fun startFullAlarm() {
+    @Synchronized
+    fun startFullAlarm(context: Context) {
         if (isAlarmPlaying) return
         isAlarmPlaying = true
 
         // 1. Continuous Alarm Vibration
+        val vibrator = getVibrator(context)
         val alarmVibratePattern = longArrayOf(0, 800, 400, 800, 400)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator.vibrate(VibrationEffect.createWaveform(alarmVibratePattern, 0)) // 0 = repeat indefinitely
@@ -63,8 +68,16 @@ class AudioAlarmHelper(private val context: Context) {
                 alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             }
 
+            // Stop any existing instance
+            mediaPlayer?.let {
+                try {
+                    if (it.isPlaying) it.stop()
+                    it.release()
+                } catch (e: Exception) {}
+            }
+
             mediaPlayer = MediaPlayer().apply {
-                setDataSource(context, alarmUri)
+                setDataSource(context.applicationContext, alarmUri)
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)
@@ -81,18 +94,30 @@ class AudioAlarmHelper(private val context: Context) {
     }
 
     /**
-     * Stops alarm audio and vibration.
+     * Stops alarm audio and vibration completely across the entire app.
      */
-    fun stopFullAlarm() {
-        vibrator.cancel()
-        mediaPlayer?.let {
-            if (it.isPlaying) {
-                it.stop()
-            }
-            it.release()
+    @Synchronized
+    fun stopFullAlarm(context: Context) {
+        try {
+            val vibrator = getVibrator(context)
+            vibrator.cancel()
+        } catch (e: Exception) {
+            Log.e("AudioAlarmHelper", "Error cancelling vibrator: ${e.message}")
         }
-        mediaPlayer = null
-        isAlarmPlaying = false
+
+        try {
+            mediaPlayer?.let {
+                if (it.isPlaying) {
+                    it.stop()
+                }
+                it.release()
+            }
+        } catch (e: Exception) {
+            Log.e("AudioAlarmHelper", "Error stopping media player: ${e.message}")
+        } finally {
+            mediaPlayer = null
+            isAlarmPlaying = false
+        }
     }
 
     fun isPlaying(): Boolean = isAlarmPlaying

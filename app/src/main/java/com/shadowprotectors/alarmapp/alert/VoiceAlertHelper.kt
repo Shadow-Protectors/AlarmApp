@@ -62,10 +62,23 @@ class VoiceAlertHelper(private val context: Context) : TextToSpeech.OnInitListen
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "TravelAlarmTTS_${System.currentTimeMillis()}")
     }
 
+    fun stop() {
+        try {
+            tts?.stop()
+        } catch (e: Exception) {
+            Log.e("VoiceAlertHelper", "Error stopping TTS: ${e.message}")
+        }
+    }
+
     fun shutdown() {
-        tts?.stop()
-        tts?.shutdown()
-        tts = null
-        isInitialized = false
+        try {
+            tts?.stop()
+            tts?.shutdown()
+        } catch (e: Exception) {
+            Log.e("VoiceAlertHelper", "Error shutting down TTS: ${e.message}")
+        } finally {
+            tts = null
+            isInitialized = false
+        }
     }
 }

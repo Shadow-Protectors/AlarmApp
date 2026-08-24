@@ -233,9 +233,8 @@ class MainActivity : AppCompatActivity() {
             }
             voiceAlertHelper.speakApproachAlert(destName, 0.5)
 
-            // 2. Play Alarm Sound + Vibration
-            val audioHelper = com.shadowprotectors.alarmapp.alert.AudioAlarmHelper(this)
-            audioHelper.startFullAlarm()
+            // 2. Play Alarm Sound + Vibration using Singleton
+            com.shadowprotectors.alarmapp.alert.AudioAlarmHelper.startFullAlarm(this)
 
             // 3. Launch Full-Screen Wake Activity
             val triggerIntent = Intent(this, com.shadowprotectors.alarmapp.ui.AlarmTriggerActivity::class.java).apply {

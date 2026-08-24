@@ -18,7 +18,6 @@ interface AlertCallback {
 class AlertManager(
     private val context: Context,
     private val voiceAlertHelper: VoiceAlertHelper,
-    private val audioAlarmHelper: AudioAlarmHelper,
     private val callback: AlertCallback? = null
 ) {
     var level1ThresholdKm: Double = 5.0
@@ -27,10 +26,14 @@ class AlertManager(
     var level4ThresholdKm: Double = 0.5
 
     private var highestTriggeredLevel = AlertLevel.NONE
+    var isAlarmDismissedByUser: Boolean = false
+        private set
 
     fun reset() {
         highestTriggeredLevel = AlertLevel.NONE
-        audioAlarmHelper.stopFullAlarm()
+        isAlarmDismissedByUser = false
+        AudioAlarmHelper.stopFullAlarm(context)
+        voiceAlertHelper.stop()
     }
 
     /**
@@ -44,6 +47,11 @@ class AlertManager(
         // If passenger is moving away or on a distinct detour loop, suppress higher level alerts
         if (approachState == ApproachState.RECEDING || approachState == ApproachState.CIRCLING_LOOP) {
             return highestTriggeredLevel
+        }
+
+        // If user already dismissed the Level 4 alarm, prevent repeating loud alarm loop on each GPS tick
+        if (isAlarmDismissedByUser && distanceKm <= level4ThresholdKm) {
+            return AlertLevel.LEVEL_4_FULL_ALARM
         }
 
         val targetLevel = when {
@@ -69,13 +77,13 @@ class AlertManager(
                 // Handled via notification banner in Service
             }
             AlertLevel.LEVEL_2_VIBRATE -> {
-                audioAlarmHelper.playLevel2Vibration()
+                AudioAlarmHelper.playLevel2Vibration(context)
             }
             AlertLevel.LEVEL_3_VOICE -> {
                 voiceAlertHelper.speakApproachAlert(destinationName, distanceKm)
             }
             AlertLevel.LEVEL_4_FULL_ALARM -> {
-                audioAlarmHelper.startFullAlarm()
+                AudioAlarmHelper.startFullAlarm(context)
             }
             AlertLevel.NONE -> {}
         }
@@ -83,6 +91,8 @@ class AlertManager(
     }
 
     fun stopAlarm() {
-        audioAlarmHelper.stopFullAlarm()
+        isAlarmDismissedByUser = true
+        AudioAlarmHelper.stopFullAlarm(context)
+        voiceAlertHelper.stop()
     }
 }

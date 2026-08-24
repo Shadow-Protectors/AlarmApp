@@ -77,7 +77,6 @@ class LocationTrackingService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
 
     private lateinit var voiceAlertHelper: VoiceAlertHelper
-    private lateinit var audioAlarmHelper: AudioAlarmHelper
     private lateinit var alertManager: AlertManager
     private val directionFilter = DirectionFilter()
 
@@ -91,8 +90,7 @@ class LocationTrackingService : Service() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         voiceAlertHelper = VoiceAlertHelper(this)
-        audioAlarmHelper = AudioAlarmHelper(this)
-        alertManager = AlertManager(this, voiceAlertHelper, audioAlarmHelper)
+        alertManager = AlertManager(this, voiceAlertHelper)
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TravelAlarm::TrackingWakeLock").apply {
@@ -118,6 +116,9 @@ class LocationTrackingService : Service() {
             }
             ACTION_STOP_ALARM -> {
                 alertManager.stopAlarm()
+                AudioAlarmHelper.stopFullAlarm(this)
+                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                notificationManager.cancel(NotificationHelper.NOTIFICATION_ALARM_ID)
             }
             ACTION_STOP -> {
                 stopForegroundTracking()
@@ -190,8 +191,8 @@ class LocationTrackingService : Service() {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NotificationHelper.NOTIFICATION_TRACKING_ID, notification)
 
-        // 2. If Level 4 is reached, trigger full-screen alarm notification and launch AlarmTriggerActivity
-        if (alertLevel == AlertLevel.LEVEL_4_FULL_ALARM) {
+        // 2. If Level 4 is reached and not dismissed by user, trigger full-screen alarm notification and launch AlarmTriggerActivity
+        if (alertLevel == AlertLevel.LEVEL_4_FULL_ALARM && !alertManager.isAlarmDismissedByUser) {
             val dismissIntent = Intent(this, LocationTrackingService::class.java).apply { action = ACTION_STOP_ALARM }
             val dismissPendingIntent = PendingIntent.getService(this, 3, dismissIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 

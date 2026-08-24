@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import com.shadowprotectors.alarmapp.alert.AudioAlarmHelper
 import com.shadowprotectors.alarmapp.databinding.ActivityAlarmTriggerBinding
 import com.shadowprotectors.alarmapp.service.LocationTrackingService
 
@@ -33,7 +34,7 @@ class AlarmTriggerActivity : AppCompatActivity() {
 
         binding.btnDismissAlarm.setOnClickListener {
             LocationTrackingService.stopAlarm(this)
-            com.shadowprotectors.alarmapp.alert.AudioAlarmHelper(this).stopFullAlarm()
+            AudioAlarmHelper.stopFullAlarm(this)
             finish()
         }
     }
