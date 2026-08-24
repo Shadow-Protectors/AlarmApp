@@ -49,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var geocodingHelper: GeocodingHelper
     private var selectedLanguageCode = "en"
     private var isCurrentlyTracking = false
+    private var voiceAlertHelper: com.shadowprotectors.alarmapp.alert.VoiceAlertHelper? = null
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -222,28 +223,57 @@ class MainActivity : AppCompatActivity() {
 
         // 4. Test / Preview Alarm Button
         binding.btnTestAlarm.setOnClickListener {
-            val destName = binding.etDestName.text.toString().trim().ifEmpty { "Madurai Junction" }
-            
-            // 1. Play Voice TTS in chosen language
-            val voiceAlertHelper = com.shadowprotectors.alarmapp.alert.VoiceAlertHelper(this)
-            voiceAlertHelper.currentLanguage = when (selectedLanguageCode) {
-                "ta" -> com.shadowprotectors.alarmapp.alert.SupportedLanguage.TAMIL
-                "hi" -> com.shadowprotectors.alarmapp.alert.SupportedLanguage.HINDI
-                else -> com.shadowprotectors.alarmapp.alert.SupportedLanguage.ENGLISH
-            }
-            voiceAlertHelper.speakApproachAlert(destName, 0.5)
+            if (com.shadowprotectors.alarmapp.alert.AudioAlarmHelper.isPlaying()) {
+                // If alarm is currently active, stop it immediately
+                com.shadowprotectors.alarmapp.alert.AudioAlarmHelper.stopFullAlarm(this)
+                voiceAlertHelper?.stop()
+                binding.btnTestAlarm.text = "🧪 Test Alarm Siren, Voice & Screen"
+                binding.btnTestAlarm.setTextColor(ContextCompat.getColor(this, R.color.primary))
+                Toast.makeText(this, "Alarm Stopped", Toast.LENGTH_SHORT).show()
+            } else {
+                val destName = binding.etDestName.text.toString().trim().ifEmpty { "Madurai Junction" }
 
-            // 2. Play Alarm Sound + Vibration using Singleton
-            com.shadowprotectors.alarmapp.alert.AudioAlarmHelper.startFullAlarm(this)
+                // 1. Play Voice TTS in chosen language
+                if (voiceAlertHelper == null) {
+                    voiceAlertHelper = com.shadowprotectors.alarmapp.alert.VoiceAlertHelper(this)
+                }
+                voiceAlertHelper?.currentLanguage = when (selectedLanguageCode) {
+                    "ta" -> com.shadowprotectors.alarmapp.alert.SupportedLanguage.TAMIL
+                    "hi" -> com.shadowprotectors.alarmapp.alert.SupportedLanguage.HINDI
+                    else -> com.shadowprotectors.alarmapp.alert.SupportedLanguage.ENGLISH
+                }
+                voiceAlertHelper?.speakApproachAlert(destName, 0.5)
 
-            // 3. Launch Full-Screen Wake Activity
-            val triggerIntent = Intent(this, com.shadowprotectors.alarmapp.ui.AlarmTriggerActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra(com.shadowprotectors.alarmapp.ui.AlarmTriggerActivity.EXTRA_DEST_NAME, destName)
-                putExtra(com.shadowprotectors.alarmapp.ui.AlarmTriggerActivity.EXTRA_DISTANCE_KM, 0.5)
+                // 2. Play Alarm Sound + Vibration using Singleton
+                com.shadowprotectors.alarmapp.alert.AudioAlarmHelper.startFullAlarm(this)
+                binding.btnTestAlarm.text = "🛑 Stop Alarm Siren"
+                binding.btnTestAlarm.setTextColor(ContextCompat.getColor(this, R.color.status_red))
+
+                // 3. Launch Full-Screen Wake Activity
+                val triggerIntent = Intent(this, com.shadowprotectors.alarmapp.ui.AlarmTriggerActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra(com.shadowprotectors.alarmapp.ui.AlarmTriggerActivity.EXTRA_DEST_NAME, destName)
+                    putExtra(com.shadowprotectors.alarmapp.ui.AlarmTriggerActivity.EXTRA_DISTANCE_KM, 0.5)
+                }
+                startActivity(triggerIntent)
             }
-            startActivity(triggerIntent)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (com.shadowprotectors.alarmapp.alert.AudioAlarmHelper.isPlaying()) {
+            binding.btnTestAlarm.text = "🛑 Stop Alarm Siren"
+            binding.btnTestAlarm.setTextColor(ContextCompat.getColor(this, R.color.status_red))
+        } else {
+            binding.btnTestAlarm.text = "🧪 Test Alarm Siren, Voice & Screen"
+            binding.btnTestAlarm.setTextColor(ContextCompat.getColor(this, R.color.primary))
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        voiceAlertHelper?.shutdown()
     }
 
     private fun showImportLinkDialog() {

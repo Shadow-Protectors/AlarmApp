@@ -15,6 +15,8 @@ class VoiceAlertHelper(private val context: Context) : TextToSpeech.OnInitListen
 
     private var tts: TextToSpeech? = null
     private var isInitialized = false
+    private var pendingSpeechText: String? = null
+
     var currentLanguage: SupportedLanguage = SupportedLanguage.ENGLISH
         set(value) {
             field = value
@@ -29,6 +31,12 @@ class VoiceAlertHelper(private val context: Context) : TextToSpeech.OnInitListen
         if (status == TextToSpeech.SUCCESS) {
             isInitialized = true
             applyLanguage(currentLanguage)
+
+            // Play any pending speech that was requested during initialization
+            pendingSpeechText?.let {
+                tts?.speak(it, TextToSpeech.QUEUE_FLUSH, null, "TravelAlarmTTS_${System.currentTimeMillis()}")
+                pendingSpeechText = null
+            }
         } else {
             Log.e("VoiceAlertHelper", "TTS Initialization failed with status: $status")
         }
@@ -44,8 +52,6 @@ class VoiceAlertHelper(private val context: Context) : TextToSpeech.OnInitListen
     }
 
     fun speakApproachAlert(destinationName: String, distanceKm: Double) {
-        if (!isInitialized || tts == null) return
-
         val formattedDistance = String.format(Locale.US, "%.1f", distanceKm)
         val text = when (currentLanguage) {
             SupportedLanguage.TAMIL -> {
@@ -59,10 +65,15 @@ class VoiceAlertHelper(private val context: Context) : TextToSpeech.OnInitListen
             }
         }
 
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "TravelAlarmTTS_${System.currentTimeMillis()}")
+        if (isInitialized && tts != null) {
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "TravelAlarmTTS_${System.currentTimeMillis()}")
+        } else {
+            pendingSpeechText = text
+        }
     }
 
     fun stop() {
+        pendingSpeechText = null
         try {
             tts?.stop()
         } catch (e: Exception) {
@@ -71,6 +82,7 @@ class VoiceAlertHelper(private val context: Context) : TextToSpeech.OnInitListen
     }
 
     fun shutdown() {
+        pendingSpeechText = null
         try {
             tts?.stop()
             tts?.shutdown()
