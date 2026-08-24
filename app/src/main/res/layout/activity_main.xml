@@ -284,73 +284,6 @@
 
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Quick Preset Chips -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:text="QUICK PRESETS"
-                        android:textSize="10sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.05"
-                        android:textColor="@color/text_muted" />
-
-                    <HorizontalScrollView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:scrollbars="none"
-                        android:layout_marginTop="6dp"
-                        android:layout_marginBottom="12dp">
-
-                        <LinearLayout
-                            android:id="@+id/presetsContainer"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal">
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/chipMadurai"
-                                android:layout_width="wrap_content"
-                                android:layout_height="36dp"
-                                style="@style/Widget.Material3.Button.TonalButton"
-                                android:text="🚆 Madurai Junction"
-                                android:textSize="12sp"
-                                android:paddingHorizontal="12dp"
-                                android:layout_marginEnd="8dp" />
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/chipCentral"
-                                android:layout_width="wrap_content"
-                                android:layout_height="36dp"
-                                style="@style/Widget.Material3.Button.TonalButton"
-                                android:text="🚆 Chennai Central"
-                                android:textSize="12sp"
-                                android:paddingHorizontal="12dp"
-                                android:layout_marginEnd="8dp" />
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/chipAirport"
-                                android:layout_width="wrap_content"
-                                android:layout_height="36dp"
-                                style="@style/Widget.Material3.Button.TonalButton"
-                                android:text="✈️ Chennai Airport"
-                                android:textSize="12sp"
-                                android:paddingHorizontal="12dp"
-                                android:layout_marginEnd="8dp" />
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/chipCoimbatore"
-                                android:layout_width="wrap_content"
-                                android:layout_height="36dp"
-                                style="@style/Widget.Material3.Button.TonalButton"
-                                android:text="🚆 Coimbatore"
-                                android:textSize="12sp"
-                                android:paddingHorizontal="12dp" />
-
-                        </LinearLayout>
-
-                    </HorizontalScrollView>
-
                     <!-- Destination Name Input -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
@@ -649,6 +582,23 @@
                 app:cornerRadius="14dp"
                 android:elevation="4dp"
                 android:backgroundTint="@color/primary" />
+
+            <!-- Explicit Stop Tracking Button (Prominent when tracking is active) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStopTracking"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="10dp"
+                android:text="🛑 Stop Tracking &amp; Terminate Background"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                app:icon="@drawable/ic_alarm"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp"
+                app:cornerRadius="14dp"
+                android:elevation="4dp"
+                android:visibility="gone"
+                android:backgroundTint="@color/status_red" />
 
             <!-- Test / Preview Alarm Button -->
             <com.google.android.material.button.MaterialButton

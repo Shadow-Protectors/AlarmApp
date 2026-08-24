@@ -79,7 +79,6 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        setupPresetChips()
         setupLanguageButtons()
         setupListeners()
         observeTrackingState()
@@ -142,6 +141,17 @@ class MainActivity : AppCompatActivity() {
 
         // Update landmark confirmation
         updateLandmarkConfirmation(lat, lng)
+
+        // Calculate and show distance from current GPS if available
+        try {
+            val fusedClient = com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(this)
+            fusedClient.lastLocation.addOnSuccessListener { loc ->
+                if (loc != null && !isCurrentlyTracking) {
+                    val dist = com.shadowprotectors.alarmapp.engine.DistanceEngine.calculateDistanceKm(loc.latitude, loc.longitude, lat, lng)
+                    binding.tvDistance.text = String.format(Locale.US, "Distance to stop: %.2f km", dist)
+                }
+            }
+        } catch (e: SecurityException) {}
     }
 
     private fun updateLandmarkConfirmation(lat: Double, lng: Double) {
@@ -149,24 +159,6 @@ class MainActivity : AppCompatActivity() {
             val landmarkText = geocodingHelper.getLandmarkConfirmation(lat, lng)
             binding.tvLandmarkConfirmation.text = "📍 Verified: $landmarkText"
             binding.cardLandmarkConfirmation.isVisible = true
-        }
-    }
-
-    private fun setupPresetChips() {
-        binding.chipMadurai.setOnClickListener {
-            setDestination("Madurai Junction", 9.9196, 78.1100)
-        }
-
-        binding.chipCentral.setOnClickListener {
-            setDestination("Chennai Central", 13.0827, 80.2707)
-        }
-
-        binding.chipAirport.setOnClickListener {
-            setDestination("Chennai Airport", 12.9941, 80.1709)
-        }
-
-        binding.chipCoimbatore.setOnClickListener {
-            setDestination("Coimbatore Junction", 10.9972, 76.9634)
         }
     }
 
@@ -212,13 +204,18 @@ class MainActivity : AppCompatActivity() {
             showImportLinkDialog()
         }
 
-        // 3. Toggle Tracking Button
+        // 3. Toggle Tracking Button (Start)
         binding.btnToggleTracking.setOnClickListener {
             if (isCurrentlyTracking) {
                 stopTrackingService()
             } else {
                 checkPermissionsAndStart()
             }
+        }
+
+        // 4. Explicit Stop Tracking Button
+        binding.btnStopTracking.setOnClickListener {
+            stopTrackingService()
         }
 
         // 4. Test / Preview Alarm Button
@@ -413,7 +410,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun stopTrackingService() {
         LocationTrackingService.stopService(this)
-        Toast.makeText(this, "Destination alarm stopped", Toast.LENGTH_SHORT).show()
+        com.shadowprotectors.alarmapp.alert.AudioAlarmHelper.stopFullAlarm(this)
+        voiceAlertHelper?.stop()
+        ServiceEventBus.resetState()
+        updateUiFromTrackingState(TrackingState())
+        Toast.makeText(this, "Background tracking stopped & terminated", Toast.LENGTH_SHORT).show()
     }
 
     private fun observeTrackingState() {
@@ -430,8 +431,8 @@ class MainActivity : AppCompatActivity() {
         isCurrentlyTracking = state.isTracking
 
         if (state.isTracking) {
-            binding.btnToggleTracking.text = "Stop Background Alarm"
-            binding.btnToggleTracking.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.status_red))
+            binding.btnToggleTracking.isVisible = false
+            binding.btnStopTracking.isVisible = true
 
             binding.tvStatus.text = "Tracking to ${state.destinationName}"
             binding.tvDistance.text = String.format(Locale.US, "Distance to stop: %.2f km", state.distanceKm)
@@ -486,8 +487,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         } else {
+            binding.btnToggleTracking.isVisible = true
             binding.btnToggleTracking.text = "Start Background Destination Alarm"
             binding.btnToggleTracking.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.primary))
+            binding.btnStopTracking.isVisible = false
+
             binding.tvStatus.text = "GPS Idle — Tap Start to track in background"
             binding.tvDistance.text = "Distance to stop: -- km"
             binding.tvSpeed.text = "Speed: -- km/h"

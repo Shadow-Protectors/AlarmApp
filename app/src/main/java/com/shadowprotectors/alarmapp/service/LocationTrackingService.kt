@@ -171,12 +171,32 @@ class LocationTrackingService : Service() {
         }
     }
 
+    private var lastLocation: Location? = null
+
     private fun handleLocationUpdate(location: Location) {
         val distanceKm = DistanceEngine.calculateDistanceKm(location.latitude, location.longitude, destLat, destLng)
         val targetBearing = DistanceEngine.calculateBearing(location.latitude, location.longitude, destLat, destLng)
         val userBearing = if (location.hasBearing()) location.bearing else -1f
-        val speedKmh = location.speed * 3.6
-        val etaMinutes = DistanceEngine.estimateEtaMinutes(distanceKm, location.speed)
+
+        // Calculate accurate real-time speed in km/h
+        val rawSpeedKmh = if (location.hasSpeed() && location.speed > 0f) location.speed * 3.6 else 0.0
+        val prevLoc = lastLocation
+        val speedKmh = if (rawSpeedKmh > 0.0) {
+            rawSpeedKmh
+        } else if (prevLoc != null) {
+            val distMeters = location.distanceTo(prevLoc)
+            val timeDiffSec = (location.time - prevLoc.time) / 1000.0
+            if (timeDiffSec in 0.5..60.0) {
+                (distMeters / timeDiffSec) * 3.6
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        }
+        lastLocation = location
+
+        val etaMinutes = DistanceEngine.estimateEtaMinutes(distanceKm, speedKmh)
 
         val approachState = directionFilter.evaluateApproach(distanceKm, userBearing, targetBearing)
         val alertLevel = alertManager.processDistance(distanceKm, approachState, destinationName)

@@ -7,6 +7,10 @@ import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -22,35 +26,117 @@ class GeocodingHelper(private val context: Context) {
 
     private val geocoder = Geocoder(context, Locale.getDefault())
 
-    suspend fun searchPlaces(query: String, maxResults: Int = 5): List<PlaceSearchResult> {
+    /**
+     * Searches places using Android Geocoder with local proximity bias,
+     * falling back to Nominatim / Photon OSM search for accurate landmark resolution (e.g., Mattuthavani bus stop).
+     */
+    suspend fun searchPlaces(
+        query: String,
+        userLat: Double? = null,
+        userLng: Double? = null,
+        maxResults: Int = 5
+    ): List<PlaceSearchResult> {
         return withContext(Dispatchers.IO) {
-            if (!Geocoder.isPresent() || query.isBlank()) {
-                return@withContext emptyList()
-            }
+            if (query.isBlank()) return@withContext emptyList()
 
+            val results = mutableListOf<PlaceSearchResult>()
+
+            // 1. Try Android Native Geocoder with local bounds if user coordinates are known
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    suspendCoroutine { continuation ->
-                        geocoder.getFromLocationName(query, maxResults, object : Geocoder.GeocodeListener {
-                            override fun onGeocode(addresses: MutableList<Address>) {
-                                continuation.resume(addresses.map { addressToSearchResult(it) })
-                            }
+                if (Geocoder.isPresent()) {
+                    val localAddresses = if (userLat != null && userLng != null) {
+                        // Bias search within ±1.5 degrees (~160 km radius around user)
+                        val lowerLeftLat = (userLat - 1.5).coerceAtLeast(-90.0)
+                        val lowerLeftLon = (userLng - 1.5).coerceAtLeast(-180.0)
+                        val upperRightLat = (userLat + 1.5).coerceAtMost(90.0)
+                        val upperRightLon = (userLng + 1.5).coerceAtMost(180.0)
 
-                            override fun onError(errorMessage: String?) {
-                                Log.w("GeocodingHelper", "Geocode error: $errorMessage")
-                                continuation.resume(emptyList())
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            suspendCoroutine { continuation ->
+                                geocoder.getFromLocationName(
+                                    query, maxResults, lowerLeftLat, lowerLeftLon, upperRightLat, upperRightLon,
+                                    object : Geocoder.GeocodeListener {
+                                        override fun onGeocode(addresses: MutableList<Address>) {
+                                            continuation.resume(addresses)
+                                        }
+                                        override fun onError(errorMessage: String?) {
+                                            continuation.resume(mutableListOf())
+                                        }
+                                    }
+                                )
                             }
-                        })
+                        } else {
+                            @Suppress("DEPRECATION")
+                            geocoder.getFromLocationName(query, maxResults, lowerLeftLat, lowerLeftLon, upperRightLat, upperRightLon) ?: emptyList()
+                        }
+                    } else {
+                        emptyList()
                     }
-                } else {
-                    @Suppress("DEPRECATION")
-                    val addresses = geocoder.getFromLocationName(query, maxResults) ?: emptyList()
-                    addresses.map { addressToSearchResult(it) }
+
+                    if (localAddresses.isNotEmpty()) {
+                        results.addAll(localAddresses.map { addressToSearchResult(it) })
+                    } else {
+                        // General fallback on Android Geocoder
+                        val generalAddresses = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            suspendCoroutine { continuation ->
+                                geocoder.getFromLocationName(query, maxResults, object : Geocoder.GeocodeListener {
+                                    override fun onGeocode(addresses: MutableList<Address>) {
+                                        continuation.resume(addresses)
+                                    }
+                                    override fun onError(errorMessage: String?) {
+                                        continuation.resume(mutableListOf())
+                                    }
+                                })
+                            }
+                        } else {
+                            @Suppress("DEPRECATION")
+                            geocoder.getFromLocationName(query, maxResults) ?: emptyList()
+                        }
+                        results.addAll(generalAddresses.map { addressToSearchResult(it) })
+                    }
                 }
             } catch (e: Exception) {
-                Log.e("GeocodingHelper", "Failed searching place: ${e.message}", e)
-                emptyList()
+                Log.w("GeocodingHelper", "Native geocoder error: ${e.message}")
             }
+
+            // 2. If results are empty or need better OSM precision (like bus stops), query Photon / Nominatim API
+            if (results.isEmpty()) {
+                try {
+                    val encodedQuery = URLEncoder.encode(query, "UTF-8")
+                    val biasParam = if (userLat != null && userLng != null) "&lat=$userLat&lon=$userLng" else ""
+                    val url = URL("https://photon.komoot.io/api/?q=$encodedQuery&limit=$maxResults$biasParam")
+                    val connection = (url.openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 4000
+                        readTimeout = 4000
+                        setRequestProperty("User-Agent", "TravelAlarm/1.0")
+                    }
+
+                    if (connection.responseCode == 200) {
+                        val responseText = connection.inputStream.bufferedReader().use { it.readText() }
+                        val jsonObject = org.json.JSONObject(responseText)
+                        val features = jsonObject.optJSONArray("features") ?: JSONArray()
+
+                        for (i in 0 until features.length()) {
+                            val feature = features.getJSONObject(i)
+                            val geometry = feature.getJSONObject("geometry")
+                            val coordinates = geometry.getJSONArray("coordinates")
+                            val lng = coordinates.getDouble(0)
+                            val lat = coordinates.getDouble(1)
+
+                            val properties = feature.getJSONObject("properties")
+                            val name = properties.optString("name", query)
+                            val city = properties.optString("city", properties.optString("county", properties.optString("state", "")))
+                            val subtitle = listOfNotNull(properties.optString("street").takeIf { it.isNotBlank() }, city.takeIf { it.isNotBlank() }, properties.optString("country").takeIf { it.isNotBlank() }).joinToString(", ")
+
+                            results.add(PlaceSearchResult(title = name, subtitle = subtitle, latitude = lat, longitude = lng))
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w("GeocodingHelper", "Photon OSM search error: ${e.message}")
+                }
+            }
+
+            results
         }
     }
 
@@ -148,14 +234,20 @@ class GeocodingHelper(private val context: Context) {
     }
 
     private fun addressToSearchResult(addr: Address): PlaceSearchResult {
-        val title = addr.featureName ?: addr.subLocality ?: addr.locality ?: "Location"
+        val title = addr.featureName ?: addr.subLocality ?: addr.locality ?: "Selected Place"
         val subtitleParts = listOfNotNull(
+            addr.thoroughfare,
             addr.subLocality.takeIf { it != title },
             addr.locality.takeIf { it != title },
             addr.adminArea,
             addr.countryName
         )
         val subtitle = if (subtitleParts.isNotEmpty()) subtitleParts.joinToString(", ") else addr.getAddressLine(0) ?: ""
-        return PlaceSearchResult(title, subtitle, addr.latitude, addr.longitude)
+        return PlaceSearchResult(
+            title = title,
+            subtitle = subtitle,
+            latitude = addr.latitude,
+            longitude = addr.longitude
+        )
     }
 }

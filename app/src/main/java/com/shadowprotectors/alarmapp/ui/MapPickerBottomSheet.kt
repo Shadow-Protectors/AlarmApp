@@ -162,7 +162,7 @@ class MapPickerBottomSheet : BottomSheetDialogFragment() {
                 if (query.length >= 2) {
                     searchJob = lifecycleScope.launch {
                         delay(350)
-                        val results = geocodingHelper.searchPlaces(query)
+                        val results = geocodingHelper.searchPlaces(query, currentCenterLat, currentCenterLng)
                         if (results.isNotEmpty()) {
                             searchAdapter.submitList(results)
                             binding.cardSuggestions.isVisible = true

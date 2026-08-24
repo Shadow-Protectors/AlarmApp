@@ -1,5 +1,6 @@
 package com.shadowprotectors.alarmapp.engine
 
+import android.location.Location
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -10,20 +11,27 @@ object DistanceEngine {
     private const val EARTH_RADIUS_KM = 6371.0
 
     /**
-     * Calculates great-circle distance between two coordinates using the Haversine formula.
+     * Calculates precise distance between two coordinates using Android's WGS84 ellipsoid model
+     * with Haversine fallback.
      * @return Distance in kilometers
      */
     fun calculateDistanceKm(
         lat1: Double, lon1: Double,
         lat2: Double, lon2: Double
     ): Double {
-        val dLat = Math.toRadians(lat2 - lat1)
-        val dLon = Math.toRadians(lon2 - lon1)
-        val a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
-                sin(dLon / 2) * sin(dLon / 2)
-        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-        return EARTH_RADIUS_KM * c
+        return try {
+            val results = FloatArray(1)
+            Location.distanceBetween(lat1, lon1, lat2, lon2, results)
+            (results[0] / 1000.0)
+        } catch (e: Exception) {
+            val dLat = Math.toRadians(lat2 - lat1)
+            val dLon = Math.toRadians(lon2 - lon1)
+            val a = sin(dLat / 2) * sin(dLat / 2) +
+                    cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+                    sin(dLon / 2) * sin(dLon / 2)
+            val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+            EARTH_RADIUS_KM * c
+        }
     }
 
     /**
@@ -45,10 +53,9 @@ object DistanceEngine {
     }
 
     /**
-     * Estimates remaining time in minutes given current distance and speed (m/s).
+     * Estimates remaining time in minutes given current distance (km) and speed (km/h).
      */
-    fun estimateEtaMinutes(distanceKm: Double, speedMps: Float): Int? {
-        val speedKmh = speedMps * 3.6
+    fun estimateEtaMinutes(distanceKm: Double, speedKmh: Double): Int? {
         if (speedKmh < 3.0) return null // Stationary or walking slowly
         val hours = distanceKm / speedKmh
         return (hours * 60).toInt().coerceAtLeast(1)
