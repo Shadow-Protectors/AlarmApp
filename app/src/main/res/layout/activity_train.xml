@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/coordinatorLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
     android:background="@color/background_light">
 
+    <!-- AppBar Banner -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary"
+        android:background="#4338CA"
         app:elevation="4dp">
 
         <LinearLayout
@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
+            android:paddingHorizontal="16dp"
             android:paddingVertical="14dp">
 
             <ImageView
@@ -42,7 +42,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/app_name"
+                    android:text="🚆 Train Express Mode"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="@color/white" />
@@ -50,9 +50,9 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Offline Destination &amp; Sleep Alert"
+                    android:text="Speed-Aware ETA &amp; Railway Station Alarm"
                     android:textSize="12sp"
-                    android:textColor="#93C5FD" />
+                    android:textColor="#C7D2FE" />
 
             </LinearLayout>
 
@@ -61,7 +61,6 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
-        android:id="@+id/nestedScrollView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true"
@@ -73,7 +72,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- 1. LIVE TRACKING STATUS CARD -->
+            <!-- 1. LIVE TRAIN TRACKING STATUS CARD -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardTrackingStatus"
                 android:layout_width="match_parent"
@@ -97,20 +96,12 @@
                         android:orientation="horizontal"
                         android:gravity="center_vertical">
 
-                        <View
-                            android:id="@+id/statusIndicator"
-                            android:layout_width="10dp"
-                            android:layout_height="10dp"
-                            android:background="@drawable/ic_alarm"
-                            android:backgroundTint="@color/text_muted"
-                            android:layout_marginEnd="8dp" />
-
                         <TextView
                             android:id="@+id/tvStatusHeader"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="LIVE STATUS"
+                            android:text="LIVE TRAIN STATUS"
                             android:textSize="11sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.05"
@@ -135,37 +126,22 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="GPS Idle — Tap Start to track in background"
+                        android:text="Train Alarm Idle — Tap Start to track in background"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary" />
 
-                    <TextView
-                        android:id="@+id/tvDistance"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Distance to stop: -- km"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/primary_light" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#F1F5F9"
+                        android:layout_marginVertical="12dp" />
 
-                    <!-- ETA display (clean, no raw speed) -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="12dp"
-                        android:background="#0D1E40FF"
-                        android:padding="10dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="⏱️"
-                            android:textSize="18sp"
-                            android:layout_marginEnd="8dp" />
+                        android:gravity="center_vertical">
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -176,20 +152,44 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="ESTIMATED ARRIVAL"
+                                android:text="DISTANCE TO STATION"
                                 android:textSize="10sp"
                                 android:textStyle="bold"
-                                android:letterSpacing="0.05"
+                                android:textColor="@color/text_secondary" />
+
+                            <TextView
+                                android:id="@+id/tvDistance"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Distance: -- km"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/text_primary" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="ESTIMATED ARRIVAL (ETA)"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
                                 android:textColor="@color/text_secondary" />
 
                             <TextView
                                 android:id="@+id/tvEta"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Starting journey…"
-                                android:textSize="15sp"
+                                android:text="Waiting to start…"
+                                android:textSize="14sp"
                                 android:textStyle="bold"
-                                android:textColor="@color/primary" />
+                                android:textColor="#4338CA" />
 
                         </LinearLayout>
 
@@ -199,7 +199,7 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 2. DESTINATION SELECTION & PRESETS -->
+            <!-- 2. TRAIN STATION DESTINATION SELECTION -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -219,13 +219,13 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="SELECT DESTINATION"
+                        android:text="SELECT TRAIN DESTINATION STATION"
                         android:textSize="11sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.05"
                         android:textColor="@color/text_secondary" />
 
-                    <!-- Destination Selection Action Buttons -->
+                    <!-- Station Selection Action Buttons -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -237,7 +237,7 @@
                             android:layout_width="0dp"
                             android:layout_height="52dp"
                             android:layout_weight="1"
-                            android:text="🔍 Pick on Map"
+                            android:text="🚆 Pick Station"
                             android:textSize="13sp"
                             android:textStyle="bold"
                             app:icon="@drawable/ic_location"
@@ -245,7 +245,9 @@
                             app:iconPadding="4dp"
                             app:cornerRadius="12dp"
                             android:layout_marginEnd="6dp"
-                            android:backgroundTint="@color/primary_light" />
+                            android:backgroundTint="#EEF2FF"
+                            android:textColor="#4338CA"
+                            app:iconTint="#4338CA" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnImportLink"
@@ -304,13 +306,14 @@
 
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Destination Name Input -->
+                    <!-- Station Name Input -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Selected Destination Name"
-                        app:boxStrokeColor="@color/primary_light"
-                        app:hintTextColor="@color/primary_light"
+                        android:layout_marginTop="12dp"
+                        android:hint="Station / Destination Name"
+                        app:boxStrokeColor="#6366F1"
+                        app:hintTextColor="#6366F1"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -327,9 +330,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="Latitude"
-                        app:boxStrokeColor="@color/primary_light"
-                        app:hintTextColor="@color/primary_light"
+                        android:hint="Station Latitude"
+                        app:boxStrokeColor="#6366F1"
+                        app:hintTextColor="#6366F1"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -347,9 +350,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="Longitude"
-                        app:boxStrokeColor="@color/primary_light"
-                        app:hintTextColor="@color/primary_light"
+                        android:hint="Station Longitude"
+                        app:boxStrokeColor="#6366F1"
+                        app:hintTextColor="#6366F1"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -386,7 +389,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="VOICE ALERT LANGUAGE (REGIONAL TTS)"
+                        android:text="VOICE ALERT LANGUAGE"
                         android:textSize="11sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.05"
@@ -401,31 +404,34 @@
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnLangEnglish"
                             android:layout_width="0dp"
-                            android:layout_height="40dp"
+                            android:layout_height="44dp"
                             android:layout_weight="1"
                             android:text="English"
                             android:textSize="12sp"
-                            android:layout_marginEnd="6dp"
-                            android:backgroundTint="@color/primary" />
+                            android:textStyle="bold"
+                            app:cornerRadius="10dp"
+                            android:layout_marginEnd="4dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnLangTamil"
                             android:layout_width="0dp"
-                            android:layout_height="40dp"
+                            android:layout_height="44dp"
                             android:layout_weight="1"
                             android:text="தமிழ்"
                             android:textSize="12sp"
-                            android:layout_marginEnd="6dp"
-                            style="@style/Widget.Material3.Button.TonalButton" />
+                            android:textStyle="bold"
+                            app:cornerRadius="10dp"
+                            android:layout_marginEnd="4dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnLangHindi"
                             android:layout_width="0dp"
-                            android:layout_height="40dp"
+                            android:layout_height="44dp"
                             android:layout_weight="1"
                             android:text="हिन्दी"
                             android:textSize="12sp"
-                            style="@style/Widget.Material3.Button.TonalButton" />
+                            android:textStyle="bold"
+                            app:cornerRadius="10dp" />
 
                     </LinearLayout>
 
@@ -433,7 +439,7 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 4. MULTI-LEVEL ALERT BREAKDOWN -->
+            <!-- 4. TRAIN ETA THRESHOLDS SUMMARY CARD -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -442,7 +448,7 @@
                 app:strokeColor="@color/card_stroke"
                 app:strokeWidth="1dp"
                 app:cardBackgroundColor="@color/surface_card"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -453,131 +459,49 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="PROGRESSIVE ALERT STAGES"
+                        android:text="TRAIN ETA ALERT LADDER (SPEED-AWARE)"
                         android:textSize="11sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.05"
-                        android:textColor="@color/text_secondary"
-                        android:layout_marginBottom="12dp" />
+                        android:textColor="@color/text_secondary" />
 
-                    <!-- Level 1 -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingVertical="4dp">
+                        android:orientation="vertical"
+                        android:layout_marginTop="10dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="5.0 km"
-                            android:textStyle="bold"
+                            android:text="• ~15 mins out: Level 1 Silent Notification Banner"
                             android:textSize="12sp"
-                            android:textColor="@color/status_green_text"
-                            android:background="@color/status_green_bg"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="2dp"
-                            android:layout_marginEnd="10dp" />
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Level 1: Silent Notification (Wake up)"
-                            android:textSize="13sp"
-                            android:textColor="@color/text_primary" />
-
-                    </LinearLayout>
-
-                    <!-- Level 2 -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingVertical="4dp">
+                            android:textColor="@color/text_secondary" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="2.0 km"
-                            android:textStyle="bold"
+                            android:layout_marginTop="3dp"
+                            android:text="• ~7 mins out: Level 2 Double Vibration Pulse"
                             android:textSize="12sp"
-                            android:textColor="@color/status_amber_text"
-                            android:background="@color/status_amber_bg"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="2dp"
-                            android:layout_marginEnd="10dp" />
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Level 2: Vibration Pulse (Pack bags)"
-                            android:textSize="13sp"
-                            android:textColor="@color/text_primary" />
-
-                    </LinearLayout>
-
-                    <!-- Level 3 -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingVertical="4dp">
+                            android:textColor="@color/text_secondary" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="1.0 km"
-                            android:textStyle="bold"
+                            android:layout_marginTop="3dp"
+                            android:text="• ~3 mins out: Level 3 Regional Voice Announcement"
                             android:textSize="12sp"
-                            android:textColor="#4338CA"
-                            android:background="#E0E7FF"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="2dp"
-                            android:layout_marginEnd="10dp" />
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Level 3: Voice TTS in Selected Language"
-                            android:textSize="13sp"
-                            android:textColor="@color/text_primary" />
-
-                    </LinearLayout>
-
-                    <!-- Level 4 -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingVertical="4dp">
+                            android:textColor="@color/text_secondary" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0.5 km"
-                            android:textStyle="bold"
+                            android:layout_marginTop="3dp"
+                            android:text="• ~1 min out: Level 4 Loud Wake Siren &amp; Full Screen Alarm"
                             android:textSize="12sp"
-                            android:textColor="@color/status_red_text"
-                            android:background="@color/status_red_bg"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="2dp"
-                            android:layout_marginEnd="10dp" />
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Level 4: Full Wake Alarm &amp; Max Ringtone"
-                            android:textSize="13sp"
                             android:textStyle="bold"
-                            android:textColor="@color/text_primary" />
+                            android:textColor="@color/status_red_text" />
 
                     </LinearLayout>
 
@@ -590,7 +514,7 @@
                 android:id="@+id/btnToggleTracking"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:text="Start Background Destination Alarm"
+                android:text="Start Background Train Alarm"
                 android:textSize="15sp"
                 android:textStyle="bold"
                 app:icon="@drawable/ic_alarm"
@@ -598,15 +522,14 @@
                 app:iconPadding="8dp"
                 app:cornerRadius="14dp"
                 android:elevation="4dp"
-                android:backgroundTint="@color/primary" />
+                android:backgroundTint="#4338CA" />
 
-            <!-- Explicit Stop Tracking Button (Prominent when tracking is active) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnStopTracking"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:layout_marginTop="10dp"
-                android:text="🛑 Stop Tracking &amp; Terminate Background"
+                android:text="🛑 Stop Train Tracking &amp; Terminate"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 app:icon="@drawable/ic_alarm"
@@ -617,7 +540,6 @@
                 android:visibility="gone"
                 android:backgroundTint="@color/status_red" />
 
-            <!-- Test / Preview Alarm Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnTestAlarm"
                 android:layout_width="match_parent"
@@ -628,8 +550,8 @@
                 android:textStyle="bold"
                 app:cornerRadius="12dp"
                 style="@style/Widget.Material3.Button.OutlinedButton"
-                android:textColor="@color/primary"
-                app:strokeColor="@color/primary" />
+                android:textColor="#4338CA"
+                app:strokeColor="#4338CA" />
 
             <View
                 android:layout_width="match_parent"
