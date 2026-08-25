@@ -28,7 +28,8 @@ class DirectionFilter(private val historyCapacity: Int = 6) {
     fun evaluateApproach(
         currentDistanceKm: Double,
         userBearing: Float,
-        targetBearing: Float
+        targetBearing: Float,
+        bearingToleranceDeg: Float = 85f
     ): ApproachState {
         distanceHistory.add(currentDistanceKm)
         if (distanceHistory.size > historyCapacity) {
@@ -56,7 +57,7 @@ class DirectionFilter(private val historyCapacity: Int = 6) {
         if (userBearing >= 0) {
             var diff = abs(userBearing - targetBearing)
             if (diff > 180f) diff = 360f - diff
-            isHeadingToward = diff <= 85f // Within forward cone
+            isHeadingToward = diff <= bearingToleranceDeg // Within forward cone specified by mode
         }
 
         return when {

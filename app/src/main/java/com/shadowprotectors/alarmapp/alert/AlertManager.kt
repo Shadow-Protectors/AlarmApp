@@ -1,7 +1,9 @@
 package com.shadowprotectors.alarmapp.alert
 
 import android.content.Context
+import com.shadowprotectors.alarmapp.engine.AlertProfile
 import com.shadowprotectors.alarmapp.engine.ApproachState
+import com.shadowprotectors.alarmapp.engine.ThresholdType
 
 enum class AlertLevel(val rank: Int, val description: String) {
     NONE(0, "En Route — Monitoring"),
@@ -40,12 +42,16 @@ class AlertManager(
     }
 
     /**
-     * Evaluates current distance & direction state, progressing alert levels sequentially.
+     * Evaluates current distance & direction state, progressing alert levels sequentially
+     * according to the active mode's AlertProfile (Distance vs ETA thresholds).
      */
-    fun processDistance(
+    fun processState(
         distanceKm: Double,
+        etaMinutes: Int?,
+        speedKmh: Double,
         approachState: ApproachState,
-        destinationName: String
+        destinationName: String,
+        profile: AlertProfile
     ): AlertLevel {
         // Handle moving away (RECEDING) warning
         if (approachState == ApproachState.RECEDING) {
@@ -64,16 +70,23 @@ class AlertManager(
             return highestTriggeredLevel
         }
 
+        // Evaluate metric based on mode profile: ETA minutes for Train, Distance km for Bus/Car
+        val metricValue = if (profile.thresholdType == ThresholdType.ETA) {
+            etaMinutes?.toDouble() ?: Double.MAX_VALUE
+        } else {
+            distanceKm
+        }
+
         // If user already dismissed the Level 4 alarm, prevent repeating loud alarm loop on each GPS tick
-        if (isAlarmDismissedByUser && distanceKm <= level4ThresholdKm) {
+        if (isAlarmDismissedByUser && metricValue <= profile.level4Value) {
             return AlertLevel.LEVEL_4_FULL_ALARM
         }
 
         val targetLevel = when {
-            distanceKm <= level4ThresholdKm -> AlertLevel.LEVEL_4_FULL_ALARM
-            distanceKm <= level3ThresholdKm -> AlertLevel.LEVEL_3_VOICE
-            distanceKm <= level2ThresholdKm -> AlertLevel.LEVEL_2_VIBRATE
-            distanceKm <= level1ThresholdKm -> AlertLevel.LEVEL_1_SILENT
+            metricValue <= profile.level4Value -> AlertLevel.LEVEL_4_FULL_ALARM
+            metricValue <= profile.level3Value -> AlertLevel.LEVEL_3_VOICE
+            metricValue <= profile.level2Value -> AlertLevel.LEVEL_2_VIBRATE
+            metricValue <= profile.level1Value -> AlertLevel.LEVEL_1_SILENT
             else -> AlertLevel.NONE
         }
 

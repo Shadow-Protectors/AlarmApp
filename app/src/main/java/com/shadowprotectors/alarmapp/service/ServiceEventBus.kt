@@ -2,6 +2,7 @@ package com.shadowprotectors.alarmapp.service
 
 import com.shadowprotectors.alarmapp.alert.AlertLevel
 import com.shadowprotectors.alarmapp.engine.ApproachState
+import com.shadowprotectors.alarmapp.engine.TripMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +18,8 @@ data class TrackingState(
     val speedKmh: Double = 0.0,
     val etaMinutes: Int? = null,
     val approachState: ApproachState = ApproachState.UNCERTAIN,
-    val alertLevel: AlertLevel = AlertLevel.NONE
+    val alertLevel: AlertLevel = AlertLevel.NONE,
+    val tripMode: TripMode = TripMode.BUS_CAR
 )
 
 object ServiceEventBus {

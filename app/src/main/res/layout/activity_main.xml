@@ -197,7 +197,77 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 2. DESTINATION SELECTION & PRESETS -->
+            <!-- 2. VEHICLE MODE SELECTOR (BUS / CAR vs TRAIN) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardModeSelector"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/card_stroke"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="@color/surface_card"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="SELECT TRAVEL VEHICLE MODE"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.05"
+                        android:textColor="@color/text_secondary" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="10dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnModeBus"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_weight="1"
+                            android:text="🚌 Bus / Car"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="12dp"
+                            android:layout_marginEnd="6dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnModeTrain"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_weight="1"
+                            android:text="🚆 Train Express"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="12dp" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvModeDescription"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="🚌 Bus Mode Active: Distance alerts at 5.0km, 2.0km, 1.0km &amp; 0.5km"
+                        android:textSize="12sp"
+                        android:textColor="@color/primary"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 3. DESTINATION SELECTION & PRESETS -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

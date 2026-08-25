@@ -41,14 +41,16 @@ class LocationTrackingService : Service() {
         const val EXTRA_DEST_LAT = "EXTRA_DEST_LAT"
         const val EXTRA_DEST_LNG = "EXTRA_DEST_LNG"
         const val EXTRA_LANG_CODE = "EXTRA_LANG_CODE"
+        const val EXTRA_TRIP_MODE = "EXTRA_TRIP_MODE"
 
-        fun startService(context: Context, destName: String, lat: Double, lng: Double, langCode: String = "en") {
+        fun startService(context: Context, destName: String, lat: Double, lng: Double, langCode: String = "en", modeName: String = "BUS_CAR") {
             val intent = Intent(context, LocationTrackingService::class.java).apply {
                 action = ACTION_START
                 putExtra(EXTRA_DEST_NAME, destName)
                 putExtra(EXTRA_DEST_LAT, lat)
                 putExtra(EXTRA_DEST_LNG, lng)
                 putExtra(EXTRA_LANG_CODE, langCode)
+                putExtra(EXTRA_TRIP_MODE, modeName)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
@@ -84,6 +86,8 @@ class LocationTrackingService : Service() {
     private var destLat = 0.0
     private var destLng = 0.0
 
+    private var activeProfile = com.shadowprotectors.alarmapp.engine.AlertProfileResolver.resolve(com.shadowprotectors.alarmapp.engine.TripMode.BUS_CAR)
+
     // Cached once at start — never changes during a tracking session
     private var stopPendingIntent: PendingIntent? = null
 
@@ -112,6 +116,10 @@ class LocationTrackingService : Service() {
                 destLat = intent.getDoubleExtra(EXTRA_DEST_LAT, 0.0)
                 destLng = intent.getDoubleExtra(EXTRA_DEST_LNG, 0.0)
                 val langCode = intent.getStringExtra(EXTRA_LANG_CODE) ?: "en"
+                val modeName = intent.getStringExtra(EXTRA_TRIP_MODE) ?: "BUS_CAR"
+
+                val tripMode = try { com.shadowprotectors.alarmapp.engine.TripMode.valueOf(modeName) } catch(e: Exception) { com.shadowprotectors.alarmapp.engine.TripMode.BUS_CAR }
+                activeProfile = com.shadowprotectors.alarmapp.engine.AlertProfileResolver.resolve(tripMode)
 
                 voiceAlertHelper.currentLanguage = when (langCode) {
                     "ta" -> SupportedLanguage.TAMIL
@@ -162,8 +170,8 @@ class LocationTrackingService : Service() {
         lastEmittedState = null
 
 
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
-            .setMinUpdateIntervalMillis(2000)
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, activeProfile.pollingIntervalMs)
+            .setMinUpdateIntervalMillis(activeProfile.minUpdateIntervalMs)
             .build()
 
         locationCallback = object : LocationCallback() {
@@ -210,8 +218,8 @@ class LocationTrackingService : Service() {
 
         val etaMinutes = DistanceEngine.estimateEtaMinutes(distanceKm, speedKmh)
 
-        val approachState = directionFilter.evaluateApproach(distanceKm, userBearing, targetBearing)
-        val alertLevel = alertManager.processDistance(distanceKm, approachState, destinationName)
+        val approachState = directionFilter.evaluateApproach(distanceKm, userBearing, targetBearing, activeProfile.bearingToleranceDeg)
+        val alertLevel = alertManager.processState(distanceKm, etaMinutes, speedKmh, approachState, destinationName, activeProfile)
 
         // 1. Update Foreground Persistent Notification — only when distance changed by > 100 m
         //    Saves ~10–12 Binder IPC calls per minute when vehicle is stationary or crawling.
@@ -258,7 +266,8 @@ class LocationTrackingService : Service() {
             speedKmh = speedKmh,
             etaMinutes = etaMinutes,
             approachState = approachState,
-            alertLevel = alertLevel
+            alertLevel = alertLevel,
+            tripMode = activeProfile.mode
         )
         val prev = lastEmittedState
         val significantChange = prev == null
@@ -266,6 +275,7 @@ class LocationTrackingService : Service() {
             || newState.etaMinutes != prev.etaMinutes
             || newState.approachState != prev.approachState
             || newState.alertLevel != prev.alertLevel
+            || newState.tripMode != prev.tripMode
         if (significantChange) {
             lastEmittedState = newState
             ServiceEventBus.updateState(newState)

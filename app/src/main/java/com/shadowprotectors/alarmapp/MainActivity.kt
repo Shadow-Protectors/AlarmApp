@@ -48,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var databaseHelper: DatabaseHelper
     private lateinit var geocodingHelper: GeocodingHelper
     private var selectedLanguageCode = "en"
+    private var selectedTripMode: com.shadowprotectors.alarmapp.engine.TripMode = com.shadowprotectors.alarmapp.engine.TripMode.BUS_CAR
     private var isCurrentlyTracking = false
     private var voiceAlertHelper: com.shadowprotectors.alarmapp.alert.VoiceAlertHelper? = null
 
@@ -79,6 +80,7 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
+        setupModeSelectorButtons()
         setupLanguageButtons()
         setupListeners()
         observeTrackingState()
@@ -167,6 +169,10 @@ class MainActivity : AppCompatActivity() {
         val savedName = prefs.getString("PREF_DEST_NAME", null)
         val savedLat = prefs.getFloat("PREF_DEST_LAT", -999f)
         val savedLng = prefs.getFloat("PREF_DEST_LNG", -999f)
+        val savedModeStr = prefs.getString("PREF_TRIP_MODE", "BUS_CAR") ?: "BUS_CAR"
+
+        val savedMode = try { com.shadowprotectors.alarmapp.engine.TripMode.valueOf(savedModeStr) } catch(e: Exception) { com.shadowprotectors.alarmapp.engine.TripMode.BUS_CAR }
+        updateModeSelectionUi(savedMode)
 
         if (!savedName.isNullOrBlank() && savedLat != -999f && savedLng != -999f) {
             val lat = savedLat.toDouble()
@@ -189,6 +195,36 @@ class MainActivity : AppCompatActivity() {
             val landmarkText = geocodingHelper.getLandmarkConfirmation(lat, lng)
             binding.tvLandmarkConfirmation.text = "📍 Verified: $landmarkText"
             binding.cardLandmarkConfirmation.isVisible = true
+        }
+    }
+
+    private fun setupModeSelectorButtons() {
+        binding.btnModeBus.setOnClickListener { updateModeSelectionUi(com.shadowprotectors.alarmapp.engine.TripMode.BUS_CAR) }
+        binding.btnModeTrain.setOnClickListener { updateModeSelectionUi(com.shadowprotectors.alarmapp.engine.TripMode.TRAIN) }
+    }
+
+    private fun updateModeSelectionUi(mode: com.shadowprotectors.alarmapp.engine.TripMode) {
+        selectedTripMode = mode
+        val primaryColor = ContextCompat.getColor(this, R.color.primary)
+        val mutedColor = Color.parseColor("#E2E8F0")
+        val whiteColor = ContextCompat.getColor(this, R.color.white)
+        val darkTextColor = ContextCompat.getColor(this, R.color.text_primary)
+
+        val prefs = getSharedPreferences("travel_alarm_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("PREF_TRIP_MODE", mode.name).apply()
+
+        if (mode == com.shadowprotectors.alarmapp.engine.TripMode.BUS_CAR) {
+            binding.btnModeBus.backgroundTintList = ColorStateList.valueOf(primaryColor)
+            binding.btnModeBus.setTextColor(whiteColor)
+            binding.btnModeTrain.backgroundTintList = ColorStateList.valueOf(mutedColor)
+            binding.btnModeTrain.setTextColor(darkTextColor)
+            binding.tvModeDescription.text = "🚌 Bus / Car Mode Active: Distance alerts at 5.0km, 2.0km, 1.0km & 0.5km"
+        } else {
+            binding.btnModeTrain.backgroundTintList = ColorStateList.valueOf(primaryColor)
+            binding.btnModeTrain.setTextColor(whiteColor)
+            binding.btnModeBus.backgroundTintList = ColorStateList.valueOf(mutedColor)
+            binding.btnModeBus.setTextColor(darkTextColor)
+            binding.tvModeDescription.text = "🚆 Train Express Mode Active: Speed-aware ETA alerts at 15m, 7m, 3m & 1m out"
         }
     }
 
@@ -434,8 +470,8 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        LocationTrackingService.startService(this, name, lat, lng, selectedLanguageCode)
-        Toast.makeText(this, "Background alarm active for $name", Toast.LENGTH_SHORT).show()
+        LocationTrackingService.startService(this, name, lat, lng, selectedLanguageCode, selectedTripMode.name)
+        Toast.makeText(this, "${selectedTripMode.icon} Background alarm active (${selectedTripMode.displayName})", Toast.LENGTH_SHORT).show()
     }
 
     private fun stopTrackingService() {
