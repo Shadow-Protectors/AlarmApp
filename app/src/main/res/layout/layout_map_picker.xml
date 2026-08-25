@@ -209,6 +209,7 @@
                 android:text="Set as Travel Alarm Destination"
                 android:textSize="15sp"
                 android:textStyle="bold"
+                android:textColor="@color/white"
                 app:cornerRadius="14dp"
                 android:backgroundTint="@color/primary" />
 

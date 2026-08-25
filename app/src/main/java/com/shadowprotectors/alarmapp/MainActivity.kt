@@ -86,8 +86,8 @@ class MainActivity : AppCompatActivity() {
         // Handle shared location links from WhatsApp or Maps
         handleIncomingIntent(intent)
 
-        // Initial landmark confirmation for default location
-        updateLandmarkConfirmation(9.9196, 78.1100)
+        // Restore last selected destination if available (no hardcoded placeholders)
+        restoreSavedDestination()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -134,6 +134,14 @@ class MainActivity : AppCompatActivity() {
         binding.etLatitude.setText(String.format(Locale.US, "%.5f", lat))
         binding.etLongitude.setText(String.format(Locale.US, "%.5f", lng))
 
+        // Save to SharedPreferences for app restart persistence
+        val prefs = getSharedPreferences("travel_alarm_prefs", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("PREF_DEST_NAME", name)
+            .putFloat("PREF_DEST_LAT", lat.toFloat())
+            .putFloat("PREF_DEST_LNG", lng.toFloat())
+            .apply()
+
         // Save to SQLite database
         databaseHelper.insertDestination(
             Destination(name = name, latitude = lat, longitude = lng, isPreset = false)
@@ -152,6 +160,28 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         } catch (e: SecurityException) {}
+    }
+
+    private fun restoreSavedDestination() {
+        val prefs = getSharedPreferences("travel_alarm_prefs", Context.MODE_PRIVATE)
+        val savedName = prefs.getString("PREF_DEST_NAME", null)
+        val savedLat = prefs.getFloat("PREF_DEST_LAT", -999f)
+        val savedLng = prefs.getFloat("PREF_DEST_LNG", -999f)
+
+        if (!savedName.isNullOrBlank() && savedLat != -999f && savedLng != -999f) {
+            val lat = savedLat.toDouble()
+            val lng = savedLng.toDouble()
+            binding.etDestName.setText(savedName)
+            binding.etLatitude.setText(String.format(Locale.US, "%.5f", lat))
+            binding.etLongitude.setText(String.format(Locale.US, "%.5f", lng))
+            updateLandmarkConfirmation(lat, lng)
+        } else {
+            // No destination saved yet — keep fields clean without dummy placeholders
+            binding.etDestName.setText("")
+            binding.etLatitude.setText("")
+            binding.etLongitude.setText("")
+            binding.cardLandmarkConfirmation.isVisible = false
+        }
     }
 
     private fun updateLandmarkConfirmation(lat: Double, lng: Double) {
@@ -412,6 +442,8 @@ class MainActivity : AppCompatActivity() {
         LocationTrackingService.stopService(this)
         com.shadowprotectors.alarmapp.alert.AudioAlarmHelper.stopFullAlarm(this)
         voiceAlertHelper?.stop()
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        notificationManager.cancelAll()
         ServiceEventBus.resetState()
         updateUiFromTrackingState(TrackingState())
         Toast.makeText(this, "Background tracking stopped & terminated", Toast.LENGTH_SHORT).show()

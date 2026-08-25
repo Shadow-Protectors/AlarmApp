@@ -29,9 +29,12 @@ class AlertManager(
     var isAlarmDismissedByUser: Boolean = false
         private set
 
+    private var hasTriggeredRecedingWarning = false
+
     fun reset() {
         highestTriggeredLevel = AlertLevel.NONE
         isAlarmDismissedByUser = false
+        hasTriggeredRecedingWarning = false
         AudioAlarmHelper.stopFullAlarm(context)
         voiceAlertHelper.stop()
     }
@@ -44,8 +47,20 @@ class AlertManager(
         approachState: ApproachState,
         destinationName: String
     ): AlertLevel {
-        // If passenger is moving away or on a distinct detour loop, suppress higher level alerts
-        if (approachState == ApproachState.RECEDING || approachState == ApproachState.CIRCLING_LOOP) {
+        // Handle moving away (RECEDING) warning
+        if (approachState == ApproachState.RECEDING) {
+            if (!hasTriggeredRecedingWarning) {
+                hasTriggeredRecedingWarning = true
+                voiceAlertHelper.speakRecedingAlert(destinationName)
+                AudioAlarmHelper.playLevel2Vibration(context)
+            }
+            return highestTriggeredLevel
+        } else if (approachState == ApproachState.APPROACHING) {
+            // Reset warning so if they move away again later, warning can re-trigger
+            hasTriggeredRecedingWarning = false
+        }
+
+        if (approachState == ApproachState.CIRCLING_LOOP) {
             return highestTriggeredLevel
         }
 

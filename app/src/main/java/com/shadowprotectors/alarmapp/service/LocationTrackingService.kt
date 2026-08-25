@@ -189,16 +189,17 @@ class LocationTrackingService : Service() {
         val targetBearing = DistanceEngine.calculateBearing(location.latitude, location.longitude, destLat, destLng)
         val userBearing = if (location.hasBearing()) location.bearing else -1f
 
-        // Calculate accurate real-time speed in km/h
+        // Calculate accurate real-time speed in km/h with strict noise filtering
         val rawSpeedKmh = if (location.hasSpeed() && location.speed > 0f) location.speed * 3.6 else 0.0
         val prevLoc = lastLocation
-        val speedKmh = if (rawSpeedKmh > 0.0) {
+        val speedKmh = if (rawSpeedKmh > 0.0 && rawSpeedKmh <= 180.0) {
             rawSpeedKmh
         } else if (prevLoc != null) {
             val distMeters = location.distanceTo(prevLoc)
             val timeDiffSec = (location.time - prevLoc.time) / 1000.0
-            if (timeDiffSec in 0.5..60.0) {
-                (distMeters / timeDiffSec) * 3.6
+            if (timeDiffSec in 1.5..60.0 && location.hasAccuracy() && location.accuracy < 50f && prevLoc.hasAccuracy() && prevLoc.accuracy < 50f) {
+                val calcSpeed = (distMeters / timeDiffSec) * 3.6
+                if (calcSpeed <= 180.0) calcSpeed else 0.0
             } else {
                 0.0
             }
@@ -274,6 +275,7 @@ class LocationTrackingService : Service() {
     private fun stopForegroundTracking() {
         locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
         alertManager.stopAlarm()
+        AudioAlarmHelper.stopFullAlarm(this)
         voiceAlertHelper.shutdown()
 
         if (wakeLock?.isHeld == true) {
@@ -281,8 +283,7 @@ class LocationTrackingService : Service() {
         }
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(NotificationHelper.NOTIFICATION_TRACKING_ID)
-        notificationManager.cancel(NotificationHelper.NOTIFICATION_ALARM_ID)
+        notificationManager.cancelAll()
 
         ServiceEventBus.resetState()
         stopForeground(STOP_FOREGROUND_REMOVE)

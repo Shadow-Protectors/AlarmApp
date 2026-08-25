@@ -267,6 +267,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
+                        android:visibility="gone"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/status_green"
@@ -293,7 +294,6 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="📍 Verified: Near Madurai Junction Clock Tower"
                                 android:textSize="12sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/status_green_text" />
@@ -315,7 +315,6 @@
                             android:id="@+id/etDestName"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Madurai Junction"
                             android:textColor="@color/text_primary"
                             android:textSize="15sp" />
 
@@ -335,7 +334,6 @@
                             android:id="@+id/etLatitude"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="9.9196"
                             android:textColor="@color/text_primary"
                             android:textSize="15sp"
                             android:inputType="numberDecimal|numberSigned" />
@@ -356,7 +354,6 @@
                             android:id="@+id/etLongitude"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="78.1100"
                             android:textColor="@color/text_primary"
                             android:textSize="15sp"
                             android:inputType="numberDecimal|numberSigned" />

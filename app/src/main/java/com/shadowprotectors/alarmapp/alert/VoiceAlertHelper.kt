@@ -72,6 +72,26 @@ class VoiceAlertHelper(private val context: Context) : TextToSpeech.OnInitListen
         }
     }
 
+    fun speakRecedingAlert(destinationName: String) {
+        val text = when (currentLanguage) {
+            SupportedLanguage.TAMIL -> {
+                "எச்சரிக்கை! $destinationName இலக்கிலிருந்து நீங்கள் விலகிச் செல்கிறீர்கள்."
+            }
+            SupportedLanguage.HINDI -> {
+                "चेतावनी! आप $destinationName से दूर जा रहे हैं।"
+            }
+            SupportedLanguage.ENGLISH -> {
+                "Warning! You are moving away from $destinationName."
+            }
+        }
+
+        if (isInitialized && tts != null) {
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "TravelAlarmTTS_Receding_${System.currentTimeMillis()}")
+        } else {
+            pendingSpeechText = text
+        }
+    }
+
     fun stop() {
         pendingSpeechText = null
         try {
