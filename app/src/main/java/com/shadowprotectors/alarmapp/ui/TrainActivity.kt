@@ -235,15 +235,6 @@ class TrainActivity : AppCompatActivity() {
         var resolvedLocation: ParsedLocation? = null
         var resolvedName: String? = null
 
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clipData = clipboard.primaryClip
-        if (clipData != null && clipData.itemCount > 0) {
-            val clipText = clipData.getItemAt(0).text?.toString() ?: ""
-            if (clipText.contains("http") || clipText.contains("geo:") || clipText.matches(Regex(".*\\d+\\.\\d+.*"))) {
-                dialogBinding.etLinkInput.setText(clipText)
-            }
-        }
-
         fun triggerParse(input: String) {
             parseJob?.cancel()
             val text = input.trim()
@@ -276,6 +267,7 @@ class TrainActivity : AppCompatActivity() {
             }
         }
 
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         dialogBinding.btnPasteClipboard.setOnClickListener {
             val clip = clipboard.primaryClip
             if (clip != null && clip.itemCount > 0) {

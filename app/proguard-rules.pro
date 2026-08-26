@@ -1,10 +1,12 @@
-# Add project specific ProGuard rules here.
-# By default, the flags in this file are appended to flags specified
-# in /usr/local/Cellar/android-sdk/24.3.3/tools/proguard/proguard-android.txt
-# You can edit the include path and order by changing the proguardFiles
-# directive in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Project-specific ProGuard / R8 Rules
+-keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
 
-# Add any project specific keep options here:
+# OpenStreetMap / OsmDroid Keep Rules
+-keep class org.osmdroid.** { *; }
+-dontwarn org.osmdroid.**
+
+# Data Models & SQLite helpers
+-keep class com.shadowprotectors.alarmapp.data.** { *; }
+-keep class com.shadowprotectors.alarmapp.engine.** { *; }
+-keep class com.shadowprotectors.alarmapp.alert.** { *; }
+-keep class com.shadowprotectors.alarmapp.service.TrackingState { *; }
