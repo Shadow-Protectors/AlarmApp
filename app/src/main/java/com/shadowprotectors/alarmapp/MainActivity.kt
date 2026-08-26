@@ -455,76 +455,180 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateUiFromTrackingState(state: TrackingState) {
         isCurrentlyTracking = state.isTracking
+        val uiState = resolveBusUiState(state)
+        renderBusUiState(uiState)
+    }
 
-        if (state.isTracking) {
-            binding.btnToggleTracking.isVisible = false
-            binding.btnStopTracking.isVisible = true
+    private fun resolveBusUiState(trackingState: TrackingState): com.shadowprotectors.alarmapp.engine.BusUiState {
+        val destName = binding.etDestName.text.toString().trim()
+        val latStr = binding.etLatitude.text.toString().trim()
+        val lngStr = binding.etLongitude.text.toString().trim()
 
-            binding.tvStatus.text = "Tracking to ${state.destinationName}"
-            binding.tvDistance.text = String.format(Locale.US, "Distance to stop: %.2f km", state.distanceKm)
-            binding.tvEta.text = formatEta(state.etaMinutes, state.speedKmh)
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+        val isGpsEnabled = locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
 
-            // Approach state badge
-            when (state.approachState) {
-                ApproachState.APPROACHING -> {
-                    binding.tvApproachBadge.text = "🟢 Approaching"
-                    binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_green_text))
-                    binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_green_bg))
+        if (!isGpsEnabled) {
+            return com.shadowprotectors.alarmapp.engine.BusUiState.Disabled
+        }
+
+        if (trackingState.isTracking) {
+            return if (trackingState.alertLevel == AlertLevel.LEVEL_4_FULL_ALARM) {
+                com.shadowprotectors.alarmapp.engine.BusUiState.LimitReached(trackingState.destinationName)
+            } else if (trackingState.distanceKm == Double.MAX_VALUE || trackingState.distanceKm <= 0.0) {
+                com.shadowprotectors.alarmapp.engine.BusUiState.Partial("Acquiring GPS location fix…")
+            } else {
+                com.shadowprotectors.alarmapp.engine.BusUiState.Offline(
+                    destinationName = trackingState.destinationName,
+                    distanceKm = trackingState.distanceKm,
+                    alertLevel = trackingState.alertLevel,
+                    approachState = trackingState.approachState
+                )
+            }
+        }
+
+        if (destName.isEmpty() && latStr.isEmpty() && lngStr.isEmpty()) {
+            return com.shadowprotectors.alarmapp.engine.BusUiState.Empty
+        }
+
+        val lat = latStr.toDoubleOrNull()
+        val lng = lngStr.toDoubleOrNull()
+        if (latStr.isNotEmpty() && (lat == null || lat < -90.0 || lat > 90.0)) {
+            return com.shadowprotectors.alarmapp.engine.BusUiState.Error("Invalid Latitude (-90 to +90)")
+        }
+        if (lngStr.isNotEmpty() && (lng == null || lng < -180.0 || lng > 180.0)) {
+            return com.shadowprotectors.alarmapp.engine.BusUiState.Error("Invalid Longitude (-180 to +180)")
+        }
+
+        return com.shadowprotectors.alarmapp.engine.BusUiState.Idle
+    }
+
+    private fun renderBusUiState(state: com.shadowprotectors.alarmapp.engine.BusUiState) {
+        when (state) {
+            is com.shadowprotectors.alarmapp.engine.BusUiState.Idle -> {
+                binding.btnToggleTracking.isVisible = true
+                binding.btnToggleTracking.text = "Start Background Destination Alarm"
+                binding.btnToggleTracking.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.primary))
+                binding.btnStopTracking.isVisible = false
+
+                binding.tvStatus.text = "🚌 Bus Alarm Idle — Ready to start"
+                binding.tvDistance.text = "Distance to stop: -- km"
+                binding.tvEta.text = "Waiting to start…"
+                binding.tvApproachBadge.text = "Idle"
+                binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                binding.tvApproachBadge.setBackgroundColor(Color.parseColor("#E2E8F0"))
+                binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.surface_card))
+                binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+            }
+
+            is com.shadowprotectors.alarmapp.engine.BusUiState.Empty -> {
+                renderBusUiState(com.shadowprotectors.alarmapp.engine.BusUiState.Idle)
+                binding.tvStatus.text = "No Destination Selected — Pick location below"
+                binding.tvApproachBadge.text = "Empty"
+            }
+
+            is com.shadowprotectors.alarmapp.engine.BusUiState.Loading -> {
+                binding.tvStatus.text = "⏳ ${state.message}"
+                binding.tvApproachBadge.text = "Loading"
+                binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.primary))
+                binding.tvApproachBadge.setBackgroundColor(Color.parseColor("#EFF6FF"))
+            }
+
+            is com.shadowprotectors.alarmapp.engine.BusUiState.Error -> {
+                binding.tvStatus.text = "⚠️ ${state.message}"
+                binding.tvApproachBadge.text = "Error"
+                binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_red_text))
+                binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
+                binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
+            }
+
+            is com.shadowprotectors.alarmapp.engine.BusUiState.Partial -> {
+                binding.btnToggleTracking.isVisible = false
+                binding.btnStopTracking.isVisible = true
+                binding.tvStatus.text = "🟡 ${state.message}"
+                binding.tvDistance.text = "Distance: Locating…"
+                binding.tvEta.text = "Acquiring GPS fix…"
+                binding.tvApproachBadge.text = "Locating GPS"
+                binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_amber_text))
+                binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_amber_bg))
+                binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_amber_bg))
+            }
+
+            is com.shadowprotectors.alarmapp.engine.BusUiState.Offline -> {
+                binding.btnToggleTracking.isVisible = false
+                binding.btnStopTracking.isVisible = true
+                binding.tvStatus.text = "Tracking to ${state.destinationName}"
+                binding.tvDistance.text = String.format(Locale.US, "Distance to stop: %.2f km", state.distanceKm)
+
+                val currentState = ServiceEventBus.trackingState.value
+                binding.tvEta.text = formatEta(currentState.etaMinutes, currentState.speedKmh)
+
+                when (state.approachState) {
+                    ApproachState.APPROACHING -> {
+                        binding.tvApproachBadge.text = "🟢 Approaching"
+                        binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_green_text))
+                        binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_green_bg))
+                    }
+                    ApproachState.CIRCLING_LOOP -> {
+                        binding.tvApproachBadge.text = "🟡 Detour / Loop Filtered"
+                        binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_amber_text))
+                        binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_amber_bg))
+                    }
+                    ApproachState.RECEDING -> {
+                        binding.tvApproachBadge.text = "🔴 Moving Away"
+                        binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_red_text))
+                        binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
+                    }
+                    ApproachState.UNCERTAIN -> {
+                        binding.tvApproachBadge.text = "Locating..."
+                        binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                        binding.tvApproachBadge.setBackgroundColor(Color.parseColor("#E2E8F0"))
+                    }
                 }
-                ApproachState.CIRCLING_LOOP -> {
-                    binding.tvApproachBadge.text = "🟡 Detour / Loop Filtered"
-                    binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_amber_text))
-                    binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_amber_bg))
-                }
-                ApproachState.RECEDING -> {
-                    binding.tvApproachBadge.text = "🔴 Moving Away"
-                    binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_red_text))
-                    binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
-                }
-                ApproachState.UNCERTAIN -> {
-                    binding.tvApproachBadge.text = "Locating..."
-                    binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
-                    binding.tvApproachBadge.setBackgroundColor(Color.parseColor("#E2E8F0"))
+
+                when (state.alertLevel) {
+                    AlertLevel.LEVEL_4_FULL_ALARM -> {
+                        binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
+                        binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_red_text))
+                    }
+                    AlertLevel.LEVEL_3_VOICE -> {
+                        binding.cardTrackingStatus.setCardBackgroundColor(Color.parseColor("#EEF2FF"))
+                        binding.tvStatus.setTextColor(Color.parseColor("#3730A3"))
+                    }
+                    AlertLevel.LEVEL_2_VIBRATE -> {
+                        binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_amber_bg))
+                        binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_amber_text))
+                    }
+                    AlertLevel.LEVEL_1_SILENT -> {
+                        binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_green_bg))
+                        binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_green_text))
+                    }
+                    AlertLevel.NONE -> {
+                        binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.surface_card))
+                        binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+                    }
                 }
             }
 
-            // Alert level status card styling
-            when (state.alertLevel) {
-                AlertLevel.LEVEL_4_FULL_ALARM -> {
-                    binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
-                    binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_red_text))
-                }
-                AlertLevel.LEVEL_3_VOICE -> {
-                    binding.cardTrackingStatus.setCardBackgroundColor(Color.parseColor("#EEF2FF"))
-                    binding.tvStatus.setTextColor(Color.parseColor("#3730A3"))
-                }
-                AlertLevel.LEVEL_2_VIBRATE -> {
-                    binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_amber_bg))
-                    binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_amber_text))
-                }
-                AlertLevel.LEVEL_1_SILENT -> {
-                    binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_green_bg))
-                    binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_green_text))
-                }
-                AlertLevel.NONE -> {
-                    binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.surface_card))
-                    binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
-                }
+            is com.shadowprotectors.alarmapp.engine.BusUiState.Disabled -> {
+                binding.tvStatus.text = "🚫 Location (GPS) Disabled in Settings"
+                binding.tvDistance.text = "Enable GPS to start alarm"
+                binding.tvApproachBadge.text = "GPS Off"
+                binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_red_text))
+                binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
+                binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
             }
-        } else {
-            binding.btnToggleTracking.isVisible = true
-            binding.btnToggleTracking.text = "Start Background Destination Alarm"
-            binding.btnToggleTracking.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.primary))
-            binding.btnStopTracking.isVisible = false
 
-            binding.tvStatus.text = "GPS Idle — Tap Start to track in background"
-            binding.tvDistance.text = "Distance to stop: -- km"
-            binding.tvEta.text = "Waiting to start…"
-            binding.tvApproachBadge.text = "Idle"
-            binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
-            binding.tvApproachBadge.setBackgroundColor(Color.parseColor("#E2E8F0"))
-            binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.surface_card))
-            binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+            is com.shadowprotectors.alarmapp.engine.BusUiState.LimitReached -> {
+                binding.btnToggleTracking.isVisible = false
+                binding.btnStopTracking.isVisible = true
+                binding.tvStatus.text = "🛑 Destination Reached! (${state.destinationName})"
+                binding.tvDistance.text = "Level 4 Wake Alarm Triggered"
+                binding.tvApproachBadge.text = "ALARM ACTIVE"
+                binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_red_text))
+                binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
+                binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
+            }
         }
     }
 
