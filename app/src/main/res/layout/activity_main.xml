@@ -12,8 +12,8 @@
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary_dark"
-        app:elevation="0dp">
+        android:background="@color/primary"
+        app:elevation="4dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -27,7 +27,7 @@
                 android:layout_width="26dp"
                 android:layout_height="26dp"
                 android:src="@drawable/ic_alarm"
-                app:tint="@color/accent"
+                app:tint="@color/white"
                 android:layout_marginEnd="12dp"
                 android:contentDescription="Alarm Icon" />
 
@@ -44,7 +44,7 @@
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.02"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/white" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -52,7 +52,7 @@
                     android:text="Offline Destination Alert System"
                     android:textSize="11sp"
                     android:letterSpacing="0.04"
-                    android:textColor="@color/text_muted" />
+                    android:textColor="#93C5FD" />
 
             </LinearLayout>
 
@@ -64,11 +64,6 @@
                 android:backgroundTint="@color/text_muted" />
 
         </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#261E3A5F" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -160,7 +155,7 @@
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
                         android:layout_marginTop="16dp"
-                        android:background="@drawable/bg_readout_panel"
+                        android:background="@color/surface_elevated"
                         android:padding="16dp">
 
                         <LinearLayout
@@ -185,7 +180,7 @@
                                 android:text="-- km"
                                 android:textSize="34sp"
                                 android:textStyle="bold"
-                                android:textColor="@color/accent"
+                                android:textColor="@color/primary_light"
                                 android:fontFamily="monospace"
                                 android:includeFontPadding="false" />
 

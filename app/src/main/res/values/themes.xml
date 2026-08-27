@@ -1,7 +1,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Night Transit — Dark mode base theme -->
+    <!-- Clean White Theme with blue brand -->
     <style name="Theme.TravelAlarm" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/primary_light</item>
+        <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryVariant">@color/primary_dark</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/accent</item>

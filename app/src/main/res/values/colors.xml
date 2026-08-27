@@ -1,49 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ================================================= -->
-    <!-- NIGHT TRANSIT — Design System v2                   -->
-    <!-- Aesthetic: Industrial Clarity / Departure Board    -->
-    <!-- ================================================= -->
+    <!-- Brand: Deep Blue + Electric Blue -->
+    <color name="primary">#1E3A8A</color>
+    <color name="primary_dark">#0F172A</color>
+    <color name="primary_light">#2563EB</color>
+    <color name="accent">#0EA5E9</color>
+    <color name="accent_dim">#0284C7</color>
 
-    <!-- Brand: Deep Navy + Electric Blue -->
-    <color name="primary">#0D1F4E</color>
-    <color name="primary_dark">#070E28</color>
-    <color name="primary_light">#3B6FE8</color>
-    <color name="accent">#00D4FF</color>
-    <color name="accent_dim">#0891B2</color>
-
-    <!-- Surfaces -->
-    <color name="background_light">#0A1020</color>
-    <color name="surface_card">#111827</color>
-    <color name="card_stroke">#1E3A5F</color>
-    <color name="surface_elevated">#1A2844</color>
+    <!-- Surfaces — Clean White -->
+    <color name="background_light">#F1F5F9</color>
+    <color name="surface_card">#FFFFFF</color>
+    <color name="card_stroke">#E2E8F0</color>
+    <color name="surface_elevated">#EFF6FF</color>
 
     <!-- Typography -->
-    <color name="text_primary">#E8F4FF</color>
-    <color name="text_secondary">#94A3B8</color>
-    <color name="text_muted">#475569</color>
-    <color name="text_accent">#00D4FF</color>
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#475569</color>
+    <color name="text_muted">#94A3B8</color>
+    <color name="text_accent">#2563EB</color>
 
     <!-- Status: Green — APPROACHING -->
-    <color name="status_green">#22C55E</color>
-    <color name="status_green_bg">#052E16</color>
-    <color name="status_green_text">#4ADE80</color>
+    <color name="status_green">#16A34A</color>
+    <color name="status_green_bg">#DCFCE7</color>
+    <color name="status_green_text">#15803D</color>
 
     <!-- Status: Amber — WARNING -->
-    <color name="status_amber">#F59E0B</color>
-    <color name="status_amber_bg">#1C1200</color>
-    <color name="status_amber_text">#FCD34D</color>
+    <color name="status_amber">#D97706</color>
+    <color name="status_amber_bg">#FEF3C7</color>
+    <color name="status_amber_text">#B45309</color>
 
     <!-- Status: Red — ALARM -->
-    <color name="status_red">#EF4444</color>
-    <color name="status_red_bg">#2D0808</color>
-    <color name="status_red_text">#FCA5A5</color>
+    <color name="status_red">#DC2626</color>
+    <color name="status_red_bg">#FEE2E2</color>
+    <color name="status_red_text">#B91C1C</color>
 
-    <!-- Status: Violet — VOICE LEVEL -->
-    <color name="status_violet">#818CF8</color>
-    <color name="status_violet_bg">#1E1B4B</color>
-    <color name="status_violet_text">#A5B4FC</color>
+    <!-- Status: Violet — VOICE LEVEL 3 -->
+    <color name="status_violet">#7C3AED</color>
+    <color name="status_violet_bg">#EDE9FE</color>
+    <color name="status_violet_text">#5B21B6</color>
 
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
 </resources>
+

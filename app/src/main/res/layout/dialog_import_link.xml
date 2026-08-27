@@ -5,8 +5,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="24dp"
-    android:background="@drawable/ic_alarm"
-    android:backgroundTint="@color/surface_card">
+    android:background="@color/surface_card">
 
     <TextView
         android:layout_width="wrap_content"
