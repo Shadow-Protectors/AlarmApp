@@ -197,29 +197,36 @@ class LocationTrackingService : Service() {
         val targetBearing = DistanceEngine.calculateBearing(location.latitude, location.longitude, destLat, destLng)
         val userBearing = if (location.hasBearing()) location.bearing else -1f
 
-        // Calculate accurate real-time speed in km/h with strict noise filtering
+        // Calculate accurate real-time speed in km/h with strict m/s to km/h conversion (* 3.6) and noise filtering
         val rawSpeedKmh = if (location.hasSpeed() && location.speed > 0f) location.speed * 3.6 else 0.0
         val prevLoc = lastLocation
-        val speedKmh = if (rawSpeedKmh > 0.0 && rawSpeedKmh <= 180.0) {
-            rawSpeedKmh
-        } else if (prevLoc != null) {
+        val calcDeltaSpeedKmh = if (prevLoc != null) {
             val distMeters = location.distanceTo(prevLoc)
             val timeDiffSec = (location.time - prevLoc.time) / 1000.0
             if (timeDiffSec in 1.5..60.0 && location.hasAccuracy() && location.accuracy < 50f && prevLoc.hasAccuracy() && prevLoc.accuracy < 50f) {
-                val calcSpeed = (distMeters / timeDiffSec) * 3.6
-                if (calcSpeed <= 180.0) calcSpeed else 0.0
+                (distMeters / timeDiffSec) * 3.6
+            } else 0.0
+        } else 0.0
+
+        // Sanity Check: If raw GPS speed and delta distance speed diverge by ~3.6x (unit mismatch signature), auto-correct
+        var finalSpeedKmh = if (rawSpeedKmh > 0.0 && rawSpeedKmh <= 180.0) {
+            if (calcDeltaSpeedKmh > 15.0 && (calcDeltaSpeedKmh / rawSpeedKmh) in 3.0..4.2) {
+                rawSpeedKmh * 3.6 // Fix double-unconverted m/s
             } else {
-                0.0
+                rawSpeedKmh
             }
+        } else if (calcDeltaSpeedKmh in 0.1..180.0) {
+            calcDeltaSpeedKmh
         } else {
             0.0
         }
+
         lastLocation = location
 
-        val etaMinutes = DistanceEngine.estimateEtaMinutes(distanceKm, speedKmh)
+        val etaMinutes = DistanceEngine.estimateEtaMinutes(distanceKm, finalSpeedKmh)
 
         val approachState = directionFilter.evaluateApproach(distanceKm, userBearing, targetBearing, activeProfile.bearingToleranceDeg)
-        val alertLevel = alertManager.processState(distanceKm, etaMinutes, speedKmh, approachState, destinationName, activeProfile)
+        val alertLevel = alertManager.processState(distanceKm, etaMinutes, finalSpeedKmh, approachState, destinationName, activeProfile)
 
         // 1. Update Foreground Persistent Notification — only when distance changed by > 100 m
         //    Saves ~10–12 Binder IPC calls per minute when vehicle is stationary or crawling.
@@ -263,7 +270,7 @@ class LocationTrackingService : Service() {
             currentLat = location.latitude,
             currentLng = location.longitude,
             distanceKm = distanceKm,
-            speedKmh = speedKmh,
+            speedKmh = finalSpeedKmh,
             etaMinutes = etaMinutes,
             approachState = approachState,
             alertLevel = alertLevel,

@@ -15,7 +15,7 @@ import com.shadowprotectors.alarmapp.ui.AlarmTriggerActivity
 object NotificationHelper {
 
     const val CHANNEL_TRACKING_ID = "travel_alarm_tracking_channel"
-    const val CHANNEL_ALARM_ID = "travel_alarm_critical_channel"
+    const val CHANNEL_ALARM_ID = "travel_alarm_critical_v2"
 
     const val NOTIFICATION_TRACKING_ID = 1001
     const val NOTIFICATION_ALARM_ID = 1002
@@ -34,14 +34,26 @@ object NotificationHelper {
                 setShowBadge(false)
             }
 
-            // 2. Critical Alarm Channel (High importance with sound and heads-up banner)
+            // 2. Critical Alarm Channel v2 (High importance with loud sound, DND bypass, and heads-up banner)
+            val alarmSoundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+                ?: android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE)
+
+            val audioAttributes = android.media.AudioAttributes.Builder()
+                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+
             val alarmChannel = NotificationChannel(
                 CHANNEL_ALARM_ID,
-                "Destination Arrival Alarms",
+                "Destination Arrival Alarms v2",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Emergency wake-up alarms when approaching your destination"
                 enableVibration(true)
+                vibrationPattern = longArrayOf(0, 800, 400, 800, 400)
+                setSound(alarmSoundUri, audioAttributes)
+                setBypassDnd(true)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 setShowBadge(true)
             }
 
@@ -101,12 +113,17 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val alarmSoundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+            ?: android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE)
+
         return NotificationCompat.Builder(context, CHANNEL_ALARM_ID)
             .setContentTitle("🚨 Arriving at $destinationName!")
             .setContentText(String.format("You are %.2f km away. Wake up and prepare your luggage!", distanceKm))
             .setSmallIcon(R.drawable.ic_alarm)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setSound(alarmSoundUri)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(false)
             .setOngoing(true)
             .setFullScreenIntent(fullScreenPendingIntent, true)

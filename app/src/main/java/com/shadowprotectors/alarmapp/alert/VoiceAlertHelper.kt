@@ -30,6 +30,13 @@ class VoiceAlertHelper(private val context: Context) : TextToSpeech.OnInitListen
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             isInitialized = true
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                val attributes = android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+                tts?.setAudioAttributes(attributes)
+            }
             applyLanguage(currentLanguage)
 
             // Play any pending speech that was requested during initialization

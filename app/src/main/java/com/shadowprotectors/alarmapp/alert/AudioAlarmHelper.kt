@@ -24,6 +24,8 @@ object AudioAlarmHelper {
     @Volatile
     private var isAlarmPlaying = false
 
+    private var audioFocusRequest: android.media.AudioFocusRequest? = null
+
     /**
      * Triggers Level 2 vibration pulse (gentle alert).
      */
@@ -80,6 +82,37 @@ object AudioAlarmHelper {
             // Stop any existing playback
             stopFullAlarm(appContext)
             isAlarmPlaying = true
+
+            // Maximize STREAM_ALARM volume so alarm is hearable loud and clear over headphones
+            val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            try {
+                val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVol, 0)
+            } catch (e: Exception) {
+                Log.w("AudioAlarmHelper", "Could not set stream volume: ${e.message}")
+            }
+
+            // Request transient exclusive Audio Focus to interrupt/pause music playing on headphones
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val focusReq = android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+                        .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_ALARM)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                        )
+                        .setAcceptsDelayedFocusGain(false)
+                        .build()
+                    audioFocusRequest = focusReq
+                    audioManager.requestAudioFocus(focusReq)
+                } else {
+                    @Suppress("DEPRECATION")
+                    audioManager.requestAudioFocus(null, AudioManager.STREAM_ALARM, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+                }
+            } catch (e: Exception) {
+                Log.e("AudioAlarmHelper", "Error requesting audio focus: ${e.message}")
+            }
 
             if (alarmUri != null) {
                 try {
@@ -158,6 +191,20 @@ object AudioAlarmHelper {
         } finally {
             mediaPlayer = null
             isAlarmPlaying = false
+        }
+
+        // 4. Release Audio Focus
+        try {
+            val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+                audioFocusRequest = null
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.abandonAudioFocus(null)
+            }
+        } catch (e: Exception) {
+            Log.e("AudioAlarmHelper", "Error abandoning audio focus: ${e.message}")
         }
     }
 

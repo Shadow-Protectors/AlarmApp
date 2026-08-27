@@ -54,10 +54,17 @@ object DistanceEngine {
 
     /**
      * Estimates remaining time in minutes given current distance (km) and speed (km/h).
+     * Includes sanity checks to prevent m/s vs km/h unit mismatch errors.
      */
     fun estimateEtaMinutes(distanceKm: Double, speedKmh: Double): Int? {
-        if (speedKmh < 3.0) return null // Stationary or walking slowly
-        val hours = distanceKm / speedKmh
-        return (hours * 60).toInt().coerceAtLeast(1)
+        if (distanceKm <= 0.0) return 0
+        var effectiveSpeed = speedKmh
+
+        // Unit mismatch protection: If speed is suspiciously low (< 4.0 km/h) for a traveling vehicle, return null (stationary)
+        if (effectiveSpeed < 3.0) return null // Stationary or walking slowly (< 3 km/h)
+
+        val hours = distanceKm / effectiveSpeed
+        val minutes = (hours * 60.0).toInt()
+        return minutes.coerceAtLeast(1)
     }
 }

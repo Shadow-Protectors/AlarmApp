@@ -584,22 +584,37 @@ class MainActivity : AppCompatActivity() {
                     AlertLevel.LEVEL_4_FULL_ALARM -> {
                         binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
                         binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_red_text))
+                        binding.tvAlertLevelBadge.text = "🚨 Level 4: Full Emergency Siren Active (0.5 km)"
+                        binding.tvAlertLevelBadge.setTextColor(ContextCompat.getColor(this, R.color.status_red_text))
+                        binding.tvAlertLevelBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
                     }
                     AlertLevel.LEVEL_3_VOICE -> {
                         binding.cardTrackingStatus.setCardBackgroundColor(Color.parseColor("#EEF2FF"))
                         binding.tvStatus.setTextColor(Color.parseColor("#3730A3"))
+                        binding.tvAlertLevelBadge.text = "🔊 Level 3: Regional Voice Announcement (1.0 km)"
+                        binding.tvAlertLevelBadge.setTextColor(Color.parseColor("#3730A3"))
+                        binding.tvAlertLevelBadge.setBackgroundColor(Color.parseColor("#EEF2FF"))
                     }
                     AlertLevel.LEVEL_2_VIBRATE -> {
                         binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_amber_bg))
                         binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_amber_text))
+                        binding.tvAlertLevelBadge.text = "📳 Level 2: Vibration Pulse Alert (2.0 km)"
+                        binding.tvAlertLevelBadge.setTextColor(ContextCompat.getColor(this, R.color.status_amber_text))
+                        binding.tvAlertLevelBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_amber_bg))
                     }
                     AlertLevel.LEVEL_1_SILENT -> {
                         binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_green_bg))
                         binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_green_text))
+                        binding.tvAlertLevelBadge.text = "🔵 Level 1: Silent Heads-Up Banner (5.0 km)"
+                        binding.tvAlertLevelBadge.setTextColor(ContextCompat.getColor(this, R.color.status_green_text))
+                        binding.tvAlertLevelBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_green_bg))
                     }
                     AlertLevel.NONE -> {
                         binding.cardTrackingStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.surface_card))
                         binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+                        binding.tvAlertLevelBadge.text = "📡 Monitoring Distance En Route"
+                        binding.tvAlertLevelBadge.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                        binding.tvAlertLevelBadge.setBackgroundColor(Color.parseColor("#1F94A3B8"))
                     }
                 }
             }
