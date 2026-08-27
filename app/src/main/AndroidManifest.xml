@@ -31,23 +31,17 @@
         android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="35">
 
-        <!-- 1. Front Mode Launcher Page (Bus / Car vs Train Choice) -->
-        <activity
-            android:name=".ModeSelectionActivity"
-            android:exported="true"
-            android:launchMode="singleTop">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
-        <!-- 2. Bus / Car Travel Alarm Page & Share Sheet Receiver -->
+        <!-- Main Destination Alarm Dashboard & Share Sheet Receiver -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
             <!-- Receive shared WhatsApp text or Maps link via Android Share Sheet -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -63,13 +57,6 @@
                 <data android:scheme="geo" />
             </intent-filter>
         </activity>
-
-        <!-- 3. Dedicated Train Express Page -->
-        <activity
-            android:name=".ui.TrainActivity"
-            android:exported="false"
-            android:launchMode="singleTop"
-            android:windowSoftInputMode="adjustResize" />
 
         <!-- Emergency Full-Screen Wake-up Alarm Activity -->
         <activity

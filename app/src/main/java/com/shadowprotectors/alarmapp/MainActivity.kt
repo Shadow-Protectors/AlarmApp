@@ -220,12 +220,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        binding.btnBackToLauncher.setOnClickListener {
-            val intent = Intent(this, ModeSelectionActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            startActivity(intent)
-            finish()
-        }
         // 1. In-App Map Picker
         binding.btnOpenMapPicker.setOnClickListener {
             val mapPicker = MapPickerBottomSheet.newInstance()
