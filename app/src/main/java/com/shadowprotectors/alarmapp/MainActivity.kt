@@ -157,7 +157,7 @@ class MainActivity : AppCompatActivity() {
             fusedClient.lastLocation.addOnSuccessListener { loc ->
                 if (loc != null && !isCurrentlyTracking) {
                     val dist = com.shadowprotectors.alarmapp.engine.DistanceEngine.calculateDistanceKm(loc.latitude, loc.longitude, lat, lng)
-                    binding.tvDistance.text = String.format(Locale.US, "Distance to stop: %.2f km", dist)
+                    binding.tvDistance.text = String.format(Locale.US, "%.2f km", dist)
                 }
             }
         } catch (e: SecurityException) {}
@@ -506,7 +506,7 @@ class MainActivity : AppCompatActivity() {
                 binding.btnStopTracking.isVisible = false
 
                 binding.tvStatus.text = "🚌 Bus Alarm Idle — Ready to start"
-                binding.tvDistance.text = "Distance to stop: -- km"
+                binding.tvDistance.text = "-- km"
                 binding.tvEta.text = "Waiting to start…"
                 binding.tvApproachBadge.text = "Idle"
                 binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
@@ -540,7 +540,7 @@ class MainActivity : AppCompatActivity() {
                 binding.btnToggleTracking.isVisible = false
                 binding.btnStopTracking.isVisible = true
                 binding.tvStatus.text = "🟡 ${state.message}"
-                binding.tvDistance.text = "Distance: Locating…"
+                binding.tvDistance.text = "Acquiring…"
                 binding.tvEta.text = "Acquiring GPS fix…"
                 binding.tvApproachBadge.text = "Locating GPS"
                 binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_amber_text))
@@ -552,7 +552,7 @@ class MainActivity : AppCompatActivity() {
                 binding.btnToggleTracking.isVisible = false
                 binding.btnStopTracking.isVisible = true
                 binding.tvStatus.text = "Tracking to ${state.destinationName}"
-                binding.tvDistance.text = String.format(Locale.US, "Distance to stop: %.2f km", state.distanceKm)
+                binding.tvDistance.text = String.format(Locale.US, "%.2f km", state.distanceKm)
 
                 val currentState = ServiceEventBus.trackingState.value
                 binding.tvEta.text = formatEta(currentState.etaMinutes, currentState.speedKmh)
@@ -648,16 +648,15 @@ class MainActivity : AppCompatActivity() {
      */
     private fun formatEta(etaMinutes: Int?, speedKmh: Double): String {
         if (etaMinutes == null) {
-            return if (speedKmh < 2.0) "Waiting to depart…" else "Calculating…"
+            return if (speedKmh < 2.0) "--:--" else "Calc…"
         }
         return when {
-            etaMinutes < 1    -> "Arriving now!"
-            etaMinutes < 60   -> "~${etaMinutes} mins away"
+            etaMinutes < 1  -> "NOW!"
+            etaMinutes < 60 -> "${etaMinutes} min"
             else -> {
                 val hrs  = etaMinutes / 60
                 val mins = etaMinutes % 60
-                if (mins == 0) "~${hrs} hr${if (hrs > 1) "s" else ""}"
-                else           "~${hrs} hr${if (hrs > 1) "s" else ""} ${mins} mins"
+                String.format(Locale.US, "%dh %02dm", hrs, mins)
             }
         }
     }
