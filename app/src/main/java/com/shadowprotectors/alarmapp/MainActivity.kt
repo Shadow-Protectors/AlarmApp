@@ -232,6 +232,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
+        // 0. Drag-down Swipe to Refresh GPS & Location Status
+        binding.swipeRefreshLayout.setColorSchemeResources(R.color.primary, R.color.primary_light, R.color.accent)
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            refreshGpsAndLocationState(showToast = true)
+        }
+
         // 1. In-App Map Picker
         binding.btnOpenMapPicker.setOnClickListener {
             val mapPicker = MapPickerBottomSheet.newInstance()
@@ -263,7 +269,7 @@ class MainActivity : AppCompatActivity() {
             stopTrackingService()
         }
 
-        // 4. Test / Preview Alarm Button
+        // 5. Test / Preview Alarm Button
         binding.btnTestAlarm.setOnClickListener {
             if (com.shadowprotectors.alarmapp.alert.AudioAlarmHelper.isPlaying()) {
                 // If alarm is currently active, stop it immediately
@@ -302,8 +308,36 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun refreshGpsAndLocationState(showToast: Boolean = false) {
+        val currentState = ServiceEventBus.trackingState.value
+        updateUiFromTrackingState(currentState)
+
+        val latStr = binding.etLatitude.text.toString()
+        val lngStr = binding.etLongitude.text.toString()
+        val lat = latStr.toDoubleOrNull()
+        val lng = lngStr.toDoubleOrNull()
+
+        if (lat != null && lng != null && !isCurrentlyTracking) {
+            try {
+                val fusedClient = com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(this)
+                fusedClient.lastLocation.addOnSuccessListener { loc ->
+                    if (loc != null) {
+                        val dist = com.shadowprotectors.alarmapp.engine.DistanceEngine.calculateDistanceKm(loc.latitude, loc.longitude, lat, lng)
+                        binding.tvDistance.text = String.format(Locale.US, "%.2f km", dist)
+                    }
+                }
+            } catch (e: SecurityException) {}
+        }
+
+        binding.swipeRefreshLayout.isRefreshing = false
+        if (showToast) {
+            Toast.makeText(this, "GPS status & distance refreshed", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        refreshGpsAndLocationState(showToast = false)
         if (com.shadowprotectors.alarmapp.alert.AudioAlarmHelper.isPlaying()) {
             binding.btnTestAlarm.text = "🛑 Stop Alarm Siren"
             binding.btnTestAlarm.setTextColor(ContextCompat.getColor(this, R.color.status_red))
