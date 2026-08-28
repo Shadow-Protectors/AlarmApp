@@ -61,8 +61,10 @@ class AlarmTriggerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        LocationTrackingService.stopAlarm(this)
-        AudioAlarmHelper.stopFullAlarm(this)
+        if (isFinishing) {
+            LocationTrackingService.stopAlarm(this)
+            AudioAlarmHelper.stopFullAlarm(this)
+        }
     }
 
     private fun turnScreenOnAndShowOverLockscreen() {

@@ -51,6 +51,7 @@ class DirectionFilter(private val historyCapacity: Int = 6) {
         // 1. Distance trend analysis: delta = last - first in window
         val netDistanceDelta = distanceHistory.last() - distanceHistory.first()
         val isDistanceDecreasing = netDistanceDelta < -0.05 // At least 50m closer
+        val isStationary = abs(netDistanceDelta) <= 0.05 // Within 50m GPS jitter/stationary
 
         // 2. Heading alignment (if GPS bearing is available)
         var isHeadingToward = true
@@ -62,9 +63,14 @@ class DirectionFilter(private val historyCapacity: Int = 6) {
 
         return when {
             isDistanceDecreasing && isHeadingToward -> ApproachState.APPROACHING
-            netDistanceDelta > 0.1 && !isHeadingToward -> ApproachState.RECEDING
-            !isDistanceDecreasing && isHeadingToward -> ApproachState.CIRCLING_LOOP
+            netDistanceDelta > 0.08 && !isHeadingToward -> ApproachState.RECEDING
+            isStationary -> ApproachState.APPROACHING // Stationary at traffic lights / bus stops: keep approaching status
+            !isDistanceDecreasing && isHeadingToward -> {
+                // If within 1.0 km of destination, never treat as detour loop
+                if (currentDistanceKm <= 1.0) ApproachState.APPROACHING else ApproachState.CIRCLING_LOOP
+            }
             else -> ApproachState.UNCERTAIN
         }
     }
 }
+

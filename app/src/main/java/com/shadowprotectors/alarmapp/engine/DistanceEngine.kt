@@ -58,13 +58,23 @@ object DistanceEngine {
      */
     fun estimateEtaMinutes(distanceKm: Double, speedKmh: Double): Int? {
         if (distanceKm <= 0.0) return 0
-        var effectiveSpeed = speedKmh
+        val effectiveSpeed = speedKmh
 
-        // Unit mismatch protection: If speed is suspiciously low (< 4.0 km/h) for a traveling vehicle, return null (stationary)
-        if (effectiveSpeed < 3.0) return null // Stationary or walking slowly (< 3 km/h)
+        // If vehicle is stationary / walking (< 3.0 km/h), return null so caller can decide
+        if (effectiveSpeed < 3.0) return null
 
         val hours = distanceKm / effectiveSpeed
         val minutes = (hours * 60.0).toInt()
         return minutes.coerceAtLeast(1)
     }
+
+    /**
+     * Computes baseline estimated transit time based on typical road speed (30 km/h for bus/car).
+     */
+    fun estimateInitialEtaMinutes(distanceKm: Double, defaultSpeedKmh: Double = 30.0): Int {
+        if (distanceKm <= 0.0) return 0
+        val hours = distanceKm / defaultSpeedKmh.coerceAtLeast(10.0)
+        return (hours * 60.0).toInt().coerceAtLeast(1)
+    }
 }
+

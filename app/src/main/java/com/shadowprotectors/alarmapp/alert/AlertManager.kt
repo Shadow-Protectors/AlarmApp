@@ -54,7 +54,7 @@ class AlertManager(
         profile: AlertProfile
     ): AlertLevel {
         // Handle moving away (RECEDING) warning
-        if (approachState == ApproachState.RECEDING) {
+        if (approachState == ApproachState.RECEDING && distanceKm > 1.0) {
             if (!hasTriggeredRecedingWarning) {
                 hasTriggeredRecedingWarning = true
                 voiceAlertHelper.speakRecedingAlert(destinationName)
@@ -66,7 +66,8 @@ class AlertManager(
             hasTriggeredRecedingWarning = false
         }
 
-        if (approachState == ApproachState.CIRCLING_LOOP) {
+        // Only freeze alert progression for detour loop if outside 1.0 km proximity
+        if (approachState == ApproachState.CIRCLING_LOOP && distanceKm > 1.0) {
             return highestTriggeredLevel
         }
 
@@ -111,6 +112,7 @@ class AlertManager(
                 voiceAlertHelper.speakApproachAlert(destinationName, distanceKm)
             }
             AlertLevel.LEVEL_4_FULL_ALARM -> {
+                voiceAlertHelper.stop()
                 AudioAlarmHelper.startFullAlarm(context)
             }
             AlertLevel.NONE -> {}

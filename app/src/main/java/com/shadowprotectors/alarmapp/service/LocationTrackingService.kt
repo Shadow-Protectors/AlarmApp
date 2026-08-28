@@ -36,6 +36,7 @@ class LocationTrackingService : Service() {
         const val ACTION_START = "com.shadowprotectors.alarmapp.ACTION_START"
         const val ACTION_STOP = "com.shadowprotectors.alarmapp.ACTION_STOP"
         const val ACTION_STOP_ALARM = "com.shadowprotectors.alarmapp.ACTION_STOP_ALARM"
+        const val ACTION_UPDATE_LANGUAGE = "com.shadowprotectors.alarmapp.ACTION_UPDATE_LANGUAGE"
 
         const val EXTRA_DEST_NAME = "EXTRA_DEST_NAME"
         const val EXTRA_DEST_LAT = "EXTRA_DEST_LAT"
@@ -57,6 +58,14 @@ class LocationTrackingService : Service() {
             } else {
                 context.startService(intent)
             }
+        }
+
+        fun updateLanguage(context: Context, langCode: String) {
+            val intent = Intent(context, LocationTrackingService::class.java).apply {
+                action = ACTION_UPDATE_LANGUAGE
+                putExtra(EXTRA_LANG_CODE, langCode)
+            }
+            context.startService(intent)
         }
 
         fun stopService(context: Context) {
@@ -94,6 +103,8 @@ class LocationTrackingService : Service() {
     // Guards: skip notification/UI emit if nothing meaningful changed
     private var lastNotifiedDistanceKm = Double.MAX_VALUE
     private var lastEmittedState: TrackingState? = null
+    private var hasLaunchedLevel4Activity = false
+    private var smoothedSpeedKmh = 0.0
 
     override fun onCreate() {
         super.onCreate()
@@ -128,6 +139,14 @@ class LocationTrackingService : Service() {
                 }
 
                 startForegroundTracking()
+            }
+            ACTION_UPDATE_LANGUAGE -> {
+                val langCode = intent.getStringExtra(EXTRA_LANG_CODE) ?: "en"
+                voiceAlertHelper.currentLanguage = when (langCode) {
+                    "ta" -> SupportedLanguage.TAMIL
+                    "hi" -> SupportedLanguage.HINDI
+                    else -> SupportedLanguage.ENGLISH
+                }
             }
             ACTION_STOP_ALARM -> {
                 alertManager.stopAlarm()
@@ -168,7 +187,8 @@ class LocationTrackingService : Service() {
         directionFilter.reset()
         lastNotifiedDistanceKm = Double.MAX_VALUE
         lastEmittedState = null
-
+        hasLaunchedLevel4Activity = false
+        smoothedSpeedKmh = 0.0
 
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, activeProfile.pollingIntervalMs)
             .setMinUpdateIntervalMillis(activeProfile.minUpdateIntervalMs)
@@ -197,7 +217,7 @@ class LocationTrackingService : Service() {
         val targetBearing = DistanceEngine.calculateBearing(location.latitude, location.longitude, destLat, destLng)
         val userBearing = if (location.hasBearing()) location.bearing else -1f
 
-        // Calculate accurate real-time speed in km/h with strict m/s to km/h conversion (* 3.6) and noise filtering
+        // Calculate accurate real-time speed in km/h (* 3.6 from m/s)
         val rawSpeedKmh = if (location.hasSpeed() && location.speed > 0f) location.speed * 3.6 else 0.0
         val prevLoc = lastLocation
         val calcDeltaSpeedKmh = if (prevLoc != null) {
@@ -208,56 +228,62 @@ class LocationTrackingService : Service() {
             } else 0.0
         } else 0.0
 
-        // Sanity Check: If raw GPS speed and delta distance speed diverge by ~3.6x (unit mismatch signature), auto-correct
-        var finalSpeedKmh = if (rawSpeedKmh > 0.0 && rawSpeedKmh <= 180.0) {
-            if (calcDeltaSpeedKmh > 15.0 && (calcDeltaSpeedKmh / rawSpeedKmh) in 3.0..4.2) {
-                rawSpeedKmh * 3.6 // Fix double-unconverted m/s
-            } else {
-                rawSpeedKmh
-            }
+        val instantSpeedKmh = if (rawSpeedKmh in 0.1..180.0) {
+            rawSpeedKmh
         } else if (calcDeltaSpeedKmh in 0.1..180.0) {
             calcDeltaSpeedKmh
         } else {
             0.0
         }
 
+        // Exponential moving average for smooth ETA without jitter (alpha = 0.35)
+        smoothedSpeedKmh = if (smoothedSpeedKmh <= 0.0) {
+            instantSpeedKmh
+        } else {
+            (0.35 * instantSpeedKmh) + (0.65 * smoothedSpeedKmh)
+        }
+
         lastLocation = location
 
+        val finalSpeedKmh = smoothedSpeedKmh
         val etaMinutes = DistanceEngine.estimateEtaMinutes(distanceKm, finalSpeedKmh)
 
         val approachState = directionFilter.evaluateApproach(distanceKm, userBearing, targetBearing, activeProfile.bearingToleranceDeg)
         val alertLevel = alertManager.processState(distanceKm, etaMinutes, finalSpeedKmh, approachState, destinationName, activeProfile)
 
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
         // 1. Update Foreground Persistent Notification — only when distance changed by > 100 m
-        //    Saves ~10–12 Binder IPC calls per minute when vehicle is stationary or crawling.
         val pendingIntent = stopPendingIntent!!
         if (Math.abs(distanceKm - lastNotifiedDistanceKm) > 0.1 || lastNotifiedDistanceKm == Double.MAX_VALUE) {
             lastNotifiedDistanceKm = distanceKm
             val notification = NotificationHelper.buildTrackingNotification(
                 this, destinationName, distanceKm, etaMinutes, pendingIntent
             )
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.notify(NotificationHelper.NOTIFICATION_TRACKING_ID, notification)
         }
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // 2. If Level 4 is reached and not dismissed by user, trigger full-screen alarm notification and launch AlarmTriggerActivity
+        // 2. If Level 4 is reached and not dismissed by user, trigger one-shot full-screen alarm notification and launch AlarmTriggerActivity
         if (alertLevel == AlertLevel.LEVEL_4_FULL_ALARM && !alertManager.isAlarmDismissedByUser) {
-            val dismissIntent = Intent(this, LocationTrackingService::class.java).apply { action = ACTION_STOP_ALARM }
-            val dismissPendingIntent = PendingIntent.getService(this, 3, dismissIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            if (!hasLaunchedLevel4Activity) {
+                hasLaunchedLevel4Activity = true
 
-            val alarmNotification = NotificationHelper.buildAlarmNotification(
-                this, destinationName, distanceKm, dismissPendingIntent
-            )
-            notificationManager.notify(NotificationHelper.NOTIFICATION_ALARM_ID, alarmNotification)
+                val dismissIntent = Intent(this, LocationTrackingService::class.java).apply { action = ACTION_STOP_ALARM }
+                val dismissPendingIntent = PendingIntent.getService(this, 3, dismissIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-            // Auto-launch activity
-            val alarmActivityIntent = Intent(this, AlarmTriggerActivity::class.java).apply {
-                putExtra(AlarmTriggerActivity.EXTRA_DEST_NAME, destinationName)
-                putExtra(AlarmTriggerActivity.EXTRA_DISTANCE_KM, distanceKm)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                val alarmNotification = NotificationHelper.buildAlarmNotification(
+                    this, destinationName, distanceKm, dismissPendingIntent
+                )
+                notificationManager.notify(NotificationHelper.NOTIFICATION_ALARM_ID, alarmNotification)
+
+                // Auto-launch activity once
+                val alarmActivityIntent = Intent(this, AlarmTriggerActivity::class.java).apply {
+                    putExtra(AlarmTriggerActivity.EXTRA_DEST_NAME, destinationName)
+                    putExtra(AlarmTriggerActivity.EXTRA_DISTANCE_KM, distanceKm)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                startActivity(alarmActivityIntent)
             }
-            startActivity(alarmActivityIntent)
         }
 
         // 3. Broadcast to UI EventBus — only when state meaningfully changed

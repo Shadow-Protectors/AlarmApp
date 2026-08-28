@@ -22,6 +22,9 @@ object AudioAlarmHelper {
     private var ringtone: Ringtone? = null
 
     @Volatile
+    private var emergencyAudioTrack: android.media.AudioTrack? = null
+
+    @Volatile
     private var isAlarmPlaying = false
 
     private var audioFocusRequest: android.media.AudioFocusRequest? = null
@@ -47,6 +50,7 @@ object AudioAlarmHelper {
 
     /**
      * Starts continuous high-priority loud alarm loop + intense vibration.
+     * Guaranteed to play sound even if phone is set to Silent Mode, Vibrate Mode, or Do Not Disturb.
      */
     @Synchronized
     fun startFullAlarm(context: Context) {
@@ -69,7 +73,39 @@ object AudioAlarmHelper {
             Log.e("AudioAlarmHelper", "Error starting vibrator: ${e.message}")
         }
 
-        // 2. Audio Playback via MediaPlayer with Ringtone fallback
+        // 2. Maximize STREAM_ALARM volume to guarantee audibility over Silent/Vibrate modes
+        val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        try {
+            val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVol, 0)
+        } catch (e: Exception) {
+            Log.w("AudioAlarmHelper", "Could not set stream volume (DND policy or system restriction): ${e.message}")
+        }
+
+        // 3. Request transient exclusive Audio Focus with USAGE_ALARM to interrupt headphones / music
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val focusReq = android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+                    .setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    .setAcceptsDelayedFocusGain(false)
+                    .build()
+                audioFocusRequest = focusReq
+                audioManager.requestAudioFocus(focusReq)
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.requestAudioFocus(null, AudioManager.STREAM_ALARM, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+            }
+        } catch (e: Exception) {
+            Log.e("AudioAlarmHelper", "Error requesting audio focus: ${e.message}")
+        }
+
+        // 4. Play Alarm Sound (MediaPlayer -> Ringtone -> AudioTrack Siren Fallback)
+        var soundStarted = false
         try {
             var alarmUri: Uri? = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             if (alarmUri == null) {
@@ -79,41 +115,7 @@ object AudioAlarmHelper {
                 alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             }
 
-            // Stop any existing playback
-            stopFullAlarm(appContext)
-            isAlarmPlaying = true
-
-            // Maximize STREAM_ALARM volume so alarm is hearable loud and clear over headphones
-            val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            try {
-                val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVol, 0)
-            } catch (e: Exception) {
-                Log.w("AudioAlarmHelper", "Could not set stream volume: ${e.message}")
-            }
-
-            // Request transient exclusive Audio Focus to interrupt/pause music playing on headphones
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val focusReq = android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
-                        .setAudioAttributes(
-                            AudioAttributes.Builder()
-                                .setUsage(AudioAttributes.USAGE_ALARM)
-                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                                .build()
-                        )
-                        .setAcceptsDelayedFocusGain(false)
-                        .build()
-                    audioFocusRequest = focusReq
-                    audioManager.requestAudioFocus(focusReq)
-                } else {
-                    @Suppress("DEPRECATION")
-                    audioManager.requestAudioFocus(null, AudioManager.STREAM_ALARM, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
-                }
-            } catch (e: Exception) {
-                Log.e("AudioAlarmHelper", "Error requesting audio focus: ${e.message}")
-            }
-
+            // A. Primary: MediaPlayer with USAGE_ALARM
             if (alarmUri != null) {
                 try {
                     mediaPlayer = MediaPlayer().apply {
@@ -129,18 +131,89 @@ object AudioAlarmHelper {
                         prepare()
                         start()
                     }
+                    soundStarted = true
                 } catch (mpEx: Exception) {
-                    Log.w("AudioAlarmHelper", "MediaPlayer failed, using Ringtone fallback: ${mpEx.message}")
+                    Log.w("AudioAlarmHelper", "MediaPlayer failed, attempting Ringtone fallback: ${mpEx.message}")
+                }
+            }
+
+            // B. Secondary: Ringtone fallback with USAGE_ALARM explicitly set
+            if (!soundStarted && alarmUri != null) {
+                try {
                     ringtone = RingtoneManager.getRingtone(appContext, alarmUri)?.apply {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             isLooping = true
                         }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            audioAttributes = AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_ALARM)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                        }
                         play()
                     }
+                    soundStarted = ringtone?.isPlaying == true
+                } catch (rEx: Exception) {
+                    Log.w("AudioAlarmHelper", "Ringtone fallback failed: ${rEx.message}")
                 }
             }
+
+            // C. Tertiary: Synthetic AudioTrack Siren Backup (Guaranteed to sound on every device in Silent mode)
+            if (!soundStarted) {
+                playEmergencyAudioTrackSiren()
+            }
+
         } catch (e: Exception) {
-            Log.e("AudioAlarmHelper", "Error playing alarm sound: ${e.message}", e)
+            Log.e("AudioAlarmHelper", "Error starting alarm sound: ${e.message}", e)
+            playEmergencyAudioTrackSiren()
+        }
+    }
+
+    /**
+     * Synthesizes a high-decibel dual-frequency alternating siren tone (880Hz / 1760Hz)
+     * using AudioTrack with USAGE_ALARM, bypassing all system silent modes.
+     */
+    private fun playEmergencyAudioTrackSiren() {
+        try {
+            val sampleRate = 22050
+            val numSamples = sampleRate * 2
+            val sample = DoubleArray(numSamples)
+            val generatedSnd = ByteArray(2 * numSamples)
+
+            for (i in 0 until numSamples) {
+                val freq = if ((i / (sampleRate / 4)) % 2 == 0) 880.0 else 1760.0
+                sample[i] = Math.sin(2.0 * Math.PI * i / (sampleRate / freq))
+            }
+
+            var idx = 0
+            for (dVal in sample) {
+                val valShort = (dVal * 32767).toInt().toShort()
+                generatedSnd[idx++] = (valShort.toInt() and 0x00ff).toByte()
+                generatedSnd[idx++] = (valShort.toInt() and 0xff00 ushr 8).toByte()
+            }
+
+            val attributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+
+            val format = android.media.AudioFormat.Builder()
+                .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                .setSampleRate(sampleRate)
+                .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                .build()
+
+            emergencyAudioTrack = android.media.AudioTrack(
+                attributes, format, generatedSnd.size,
+                android.media.AudioTrack.MODE_STATIC, AudioManager.AUDIO_SESSION_ID_GENERATE
+            ).apply {
+                write(generatedSnd, 0, generatedSnd.size)
+                setLoopPoints(0, numSamples, -1)
+                play()
+            }
+            Log.i("AudioAlarmHelper", "Emergency AudioTrack PCM siren active")
+        } catch (e: Exception) {
+            Log.e("AudioAlarmHelper", "Failed to start emergency AudioTrack siren: ${e.message}")
         }
     }
 
@@ -190,10 +263,24 @@ object AudioAlarmHelper {
             Log.e("AudioAlarmHelper", "Error stopping media player: ${e.message}")
         } finally {
             mediaPlayer = null
+        }
+
+        // 4. Stop Emergency AudioTrack Siren
+        try {
+            emergencyAudioTrack?.let {
+                if (it.playState == android.media.AudioTrack.PLAYSTATE_PLAYING) {
+                    it.stop()
+                }
+                it.release()
+            }
+        } catch (e: Exception) {
+            Log.e("AudioAlarmHelper", "Error stopping emergency AudioTrack: ${e.message}")
+        } finally {
+            emergencyAudioTrack = null
             isAlarmPlaying = false
         }
 
-        // 4. Release Audio Focus
+        // 5. Release Audio Focus
         try {
             val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

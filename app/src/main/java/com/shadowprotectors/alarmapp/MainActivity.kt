@@ -201,8 +201,18 @@ class MainActivity : AppCompatActivity() {
         val whiteColor = ContextCompat.getColor(this, R.color.white)
         val darkTextColor = ContextCompat.getColor(this, R.color.text_primary)
 
-        fun updateUi(selected: String) {
+        val prefs = getSharedPreferences("travel_alarm_prefs", Context.MODE_PRIVATE)
+        selectedLanguageCode = prefs.getString("PREF_LANG_CODE", "en") ?: "en"
+
+        fun updateUi(selected: String, save: Boolean = true) {
             selectedLanguageCode = selected
+
+            if (save) {
+                prefs.edit().putString("PREF_LANG_CODE", selected).apply()
+                if (isCurrentlyTracking) {
+                    LocationTrackingService.updateLanguage(this, selected)
+                }
+            }
 
             binding.btnLangEnglish.backgroundTintList = ColorStateList.valueOf(if (selected == "en") primaryColor else mutedColor)
             binding.btnLangEnglish.setTextColor(if (selected == "en") whiteColor else darkTextColor)
@@ -213,6 +223,8 @@ class MainActivity : AppCompatActivity() {
             binding.btnLangHindi.backgroundTintList = ColorStateList.valueOf(if (selected == "hi") primaryColor else mutedColor)
             binding.btnLangHindi.setTextColor(if (selected == "hi") whiteColor else darkTextColor)
         }
+
+        updateUi(selectedLanguageCode, save = false)
 
         binding.btnLangEnglish.setOnClickListener { updateUi("en") }
         binding.btnLangTamil.setOnClickListener { updateUi("ta") }
@@ -620,8 +632,11 @@ class MainActivity : AppCompatActivity() {
             }
 
             is com.shadowprotectors.alarmapp.engine.BusUiState.Disabled -> {
-                binding.tvStatus.text = "🚫 Location (GPS) Disabled in Settings"
-                binding.tvDistance.text = "Enable GPS to start alarm"
+                binding.btnToggleTracking.isVisible = !isCurrentlyTracking
+                binding.btnStopTracking.isVisible = isCurrentlyTracking
+                binding.tvStatus.text = "🚫 Location (GPS) Disabled in System Settings"
+                binding.tvDistance.text = "-- km"
+                binding.tvEta.text = "--:--"
                 binding.tvApproachBadge.text = "GPS Off"
                 binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_red_text))
                 binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
@@ -632,7 +647,7 @@ class MainActivity : AppCompatActivity() {
                 binding.btnToggleTracking.isVisible = false
                 binding.btnStopTracking.isVisible = true
                 binding.tvStatus.text = "🛑 Destination Reached! (${state.destinationName})"
-                binding.tvDistance.text = "Level 4 Wake Alarm Triggered"
+                binding.tvDistance.text = "Level 4 Wake Alarm Active"
                 binding.tvApproachBadge.text = "ALARM ACTIVE"
                 binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_red_text))
                 binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
@@ -643,19 +658,25 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Returns a clean, human-readable ETA string for passengers.
-     * Raw speed is never shown on UI — it is used only internally here to detect
-     * if the vehicle is stationary (GPS jitter at < 2 km/h).
+     * When stationary (< 2 km/h), calculates a baseline estimate based on average road speeds.
      */
     private fun formatEta(etaMinutes: Int?, speedKmh: Double): String {
-        if (etaMinutes == null) {
-            return if (speedKmh < 2.0) "--:--" else "Calc…"
+        val effectiveMinutes = etaMinutes ?: run {
+            val dist = ServiceEventBus.trackingState.value.distanceKm
+            if (dist > 0.0 && dist < Double.MAX_VALUE) {
+                com.shadowprotectors.alarmapp.engine.DistanceEngine.estimateInitialEtaMinutes(dist, 30.0)
+            } else null
+        }
+
+        if (effectiveMinutes == null) {
+            return "--:--"
         }
         return when {
-            etaMinutes < 1  -> "NOW!"
-            etaMinutes < 60 -> "${etaMinutes} min"
+            effectiveMinutes < 1  -> "NOW!"
+            effectiveMinutes < 60 -> "${effectiveMinutes} min"
             else -> {
-                val hrs  = etaMinutes / 60
-                val mins = etaMinutes % 60
+                val hrs  = effectiveMinutes / 60
+                val mins = effectiveMinutes % 60
                 String.format(Locale.US, "%dh %02dm", hrs, mins)
             }
         }
