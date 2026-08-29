@@ -215,7 +215,8 @@ class LocationTrackingService : Service() {
     private fun handleLocationUpdate(location: Location) {
         val distanceKm = DistanceEngine.calculateDistanceKm(location.latitude, location.longitude, destLat, destLng)
         val targetBearing = DistanceEngine.calculateBearing(location.latitude, location.longitude, destLat, destLng)
-        val userBearing = if (location.hasBearing()) location.bearing else -1f
+        // Only trust bearing if the user is moving at a measurable speed (> 0.5 m/s or 1.8 km/h)
+        val userBearing = if (location.hasBearing() && location.hasSpeed() && location.speed > 0.5f) location.bearing else -1f
 
         // Calculate accurate real-time speed in km/h (* 3.6 from m/s)
         val rawSpeedKmh = if (location.hasSpeed() && location.speed > 0f) location.speed * 3.6 else 0.0
@@ -246,9 +247,9 @@ class LocationTrackingService : Service() {
         lastLocation = location
 
         val finalSpeedKmh = smoothedSpeedKmh
-        val etaMinutes = DistanceEngine.estimateEtaMinutes(distanceKm, finalSpeedKmh)
+        val etaMinutes = DistanceEngine.estimateEtaMinutes(distanceKm, finalSpeedKmh, activeProfile.mode)
 
-        val approachState = directionFilter.evaluateApproach(distanceKm, userBearing, targetBearing, activeProfile.bearingToleranceDeg)
+        val approachState = directionFilter.evaluateApproach(distanceKm, userBearing, targetBearing, activeProfile.bearingToleranceDeg, location.time)
         val alertLevel = alertManager.processState(distanceKm, etaMinutes, finalSpeedKmh, approachState, destinationName, activeProfile)
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

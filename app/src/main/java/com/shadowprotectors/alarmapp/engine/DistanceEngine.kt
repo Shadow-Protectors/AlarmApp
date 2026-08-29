@@ -10,6 +10,8 @@ object DistanceEngine {
 
     private const val EARTH_RADIUS_KM = 6371.0
 
+    private var isUsingHaversineFallback = false
+
     /**
      * Calculates precise distance between two coordinates using Android's WGS84 ellipsoid model
      * with Haversine fallback.
@@ -19,28 +21,36 @@ object DistanceEngine {
         lat1: Double, lon1: Double,
         lat2: Double, lon2: Double
     ): Double {
-        return try {
-            val results = FloatArray(1)
-            Location.distanceBetween(lat1, lon1, lat2, lon2, results)
-            (results[0] / 1000.0)
-        } catch (e: Exception) {
-            val dLat = Math.toRadians(lat2 - lat1)
-            val dLon = Math.toRadians(lon2 - lon1)
-            val a = sin(dLat / 2) * sin(dLat / 2) +
-                    cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
-                    sin(dLon / 2) * sin(dLon / 2)
-            val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-            EARTH_RADIUS_KM * c
+        if (!isUsingHaversineFallback) {
+            try {
+                val results = FloatArray(1)
+                Location.distanceBetween(lat1, lon1, lat2, lon2, results)
+                return (results[0] / 1000.0)
+            } catch (e: Exception) {
+                isUsingHaversineFallback = true
+            }
         }
+        
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = sin(dLat / 2) * sin(dLat / 2) +
+                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+                sin(dLon / 2) * sin(dLon / 2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        return EARTH_RADIUS_KM * c
     }
 
     /**
      * Calculates the initial bearing (compass heading in degrees 0..360) from point 1 to point 2.
+     * Returns -1f if the distance is too small to calculate a meaningful bearing.
      */
     fun calculateBearing(
         lat1: Double, lon1: Double,
         lat2: Double, lon2: Double
     ): Float {
+        val distance = calculateDistanceKm(lat1, lon1, lat2, lon2)
+        if (distance < 0.02) return -1f
+
         val phi1 = Math.toRadians(lat1)
         val phi2 = Math.toRadians(lat2)
         val deltaLambda = Math.toRadians(lon2 - lon1)
@@ -54,14 +64,21 @@ object DistanceEngine {
 
     /**
      * Estimates remaining time in minutes given current distance (km) and speed (km/h).
-     * Includes sanity checks to prevent m/s vs km/h unit mismatch errors.
+     * Includes fallback minimum speeds based on trip mode to prevent absurdly large ETAs 
+     * when stationary or in heavy traffic.
      */
-    fun estimateEtaMinutes(distanceKm: Double, speedKmh: Double): Int? {
+    fun estimateEtaMinutes(distanceKm: Double, speedKmh: Double, tripMode: com.shadowprotectors.alarmapp.engine.TripMode): Int? {
         if (distanceKm <= 0.0) return 0
-        val effectiveSpeed = speedKmh
 
-        // If vehicle is stationary / walking (< 3.0 km/h), return null so caller can decide
-        if (effectiveSpeed < 3.0) return null
+        val minRealisticSpeed = when (tripMode) {
+            com.shadowprotectors.alarmapp.engine.TripMode.TRAIN -> 40.0
+            com.shadowprotectors.alarmapp.engine.TripMode.BUS_CAR -> 25.0
+            else -> 10.0
+        }
+
+        // Use the actual speed if it's realistic, otherwise fallback to the minimum realistic speed for that mode.
+        // This prevents 4-hour ETAs for a 20km trip when the user is just sitting at home testing or stuck at a red light.
+        val effectiveSpeed = if (speedKmh < minRealisticSpeed) minRealisticSpeed else speedKmh
 
         val hours = distanceKm / effectiveSpeed
         val minutes = (hours * 60.0).toInt()

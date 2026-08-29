@@ -552,8 +552,8 @@ class MainActivity : AppCompatActivity() {
                 binding.btnStopTracking.isVisible = false
 
                 binding.tvStatus.text = "🚌 Bus Alarm Idle — Ready to start"
-                binding.tvDistance.text = "-- km"
-                binding.tvEta.text = "Waiting to start…"
+                binding.tvDistance.text = ""
+                binding.tvEta.text = ""
                 binding.tvApproachBadge.text = "Idle"
                 binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
                 binding.tvApproachBadge.setBackgroundColor(Color.parseColor("#E2E8F0"))
@@ -669,8 +669,8 @@ class MainActivity : AppCompatActivity() {
                 binding.btnToggleTracking.isVisible = !isCurrentlyTracking
                 binding.btnStopTracking.isVisible = isCurrentlyTracking
                 binding.tvStatus.text = "🚫 Location (GPS) Disabled in System Settings"
-                binding.tvDistance.text = "-- km"
-                binding.tvEta.text = "--:--"
+                binding.tvDistance.text = ""
+                binding.tvEta.text = ""
                 binding.tvApproachBadge.text = "GPS Off"
                 binding.tvApproachBadge.setTextColor(ContextCompat.getColor(this, R.color.status_red_text))
                 binding.tvApproachBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.status_red_bg))
@@ -703,7 +703,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (effectiveMinutes == null) {
-            return "--:--"
+            return ""
         }
         return when {
             effectiveMinutes < 1  -> "NOW!"

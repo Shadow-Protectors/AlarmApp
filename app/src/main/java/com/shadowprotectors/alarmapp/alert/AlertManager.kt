@@ -93,7 +93,15 @@ class AlertManager(
 
         // Only fire alerts if progressing to a higher alert level
         if (targetLevel.rank > highestTriggeredLevel.rank) {
+            val previousLevel = highestTriggeredLevel
             highestTriggeredLevel = targetLevel
+
+            // If we jumped straight to Level 4 without hitting Level 3 first (e.g., testing or fast movement)
+            if (targetLevel == AlertLevel.LEVEL_4_FULL_ALARM && previousLevel.rank < AlertLevel.LEVEL_3_VOICE.rank) {
+                // Ensure the approach warning is at least queued!
+                voiceAlertHelper.speakApproachAlert(destinationName, distanceKm)
+            }
+
             fireAlert(targetLevel, distanceKm, destinationName)
         }
 
@@ -112,7 +120,8 @@ class AlertManager(
                 voiceAlertHelper.speakApproachAlert(destinationName, distanceKm)
             }
             AlertLevel.LEVEL_4_FULL_ALARM -> {
-                voiceAlertHelper.stop()
+                // Speak arrival alert and start loud siren
+                voiceAlertHelper.speakArrivalAlert(destinationName)
                 AudioAlarmHelper.startFullAlarm(context)
             }
             AlertLevel.NONE -> {}

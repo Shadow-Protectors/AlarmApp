@@ -13,10 +13,12 @@ class DirectionFilter(private val historyCapacity: Int = 6) {
 
     private val distanceHistory = mutableListOf<Double>()
     private val bearingHistory = mutableListOf<Float>()
+    private val timeHistory = mutableListOf<Long>()
 
     fun reset() {
         distanceHistory.clear()
         bearingHistory.clear()
+        timeHistory.clear()
     }
 
     /**
@@ -24,16 +26,28 @@ class DirectionFilter(private val historyCapacity: Int = 6) {
      * @param currentDistanceKm Current distance to stop
      * @param userBearing Degrees (0..360) from device GPS (or -1 if unavailable)
      * @param targetBearing Degrees (0..360) directly toward destination
+     * @param currentTimeMs Timestamp of the location fix
      */
     fun evaluateApproach(
         currentDistanceKm: Double,
         userBearing: Float,
         targetBearing: Float,
-        bearingToleranceDeg: Float = 85f
+        bearingToleranceDeg: Float = 85f,
+        currentTimeMs: Long = System.currentTimeMillis()
     ): ApproachState {
+        // If there's a huge time gap (e.g. > 90 seconds) since the last fix,
+        // it means we lost GPS (tunnel, elevator, background throttle).
+        // Comparing distance across a huge gap can falsely trigger a massive "decreasing" delta.
+        // We must reset the history to prevent this "teleportation" ratchet bug.
+        if (timeHistory.isNotEmpty() && (currentTimeMs - timeHistory.last()) > 90_000L) {
+            reset()
+        }
+
         distanceHistory.add(currentDistanceKm)
+        timeHistory.add(currentTimeMs)
         if (distanceHistory.size > historyCapacity) {
             distanceHistory.removeAt(0)
+            timeHistory.removeAt(0)
         }
 
         if (userBearing >= 0) {
@@ -52,6 +66,7 @@ class DirectionFilter(private val historyCapacity: Int = 6) {
         val netDistanceDelta = distanceHistory.last() - distanceHistory.first()
         val isDistanceDecreasing = netDistanceDelta < -0.05 // At least 50m closer
         val isStationary = abs(netDistanceDelta) <= 0.05 // Within 50m GPS jitter/stationary
+        val isSteadyApproach = netDistanceDelta in -0.05..0.08 // Slowly moving towards or just crawling in traffic
 
         // 2. Heading alignment (if GPS bearing is available)
         var isHeadingToward = true
@@ -65,6 +80,7 @@ class DirectionFilter(private val historyCapacity: Int = 6) {
             isDistanceDecreasing && isHeadingToward -> ApproachState.APPROACHING
             netDistanceDelta > 0.08 && !isHeadingToward -> ApproachState.RECEDING
             isStationary -> ApproachState.APPROACHING // Stationary at traffic lights / bus stops: keep approaching status
+            isSteadyApproach && isHeadingToward -> ApproachState.APPROACHING // Fix unclassified dead zone: slow traffic approach
             !isDistanceDecreasing && isHeadingToward -> {
                 // If within 1.0 km of destination, never treat as detour loop
                 if (currentDistanceKm <= 1.0) ApproachState.APPROACHING else ApproachState.CIRCLING_LOOP

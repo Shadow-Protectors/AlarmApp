@@ -99,6 +99,27 @@ class VoiceAlertHelper(private val context: Context) : TextToSpeech.OnInitListen
         }
     }
 
+    fun speakArrivalAlert(destinationName: String) {
+        val text = when (currentLanguage) {
+            SupportedLanguage.TAMIL -> {
+                "கவனம்! நீங்கள் $destinationName இலக்கை நெருங்கிவிட்டீர்கள். உடனே எழுந்திருக்கவும்!"
+            }
+            SupportedLanguage.HINDI -> {
+                "ध्यान दें! आप $destinationName के बहुत करीब हैं। कृपया उठें!"
+            }
+            SupportedLanguage.ENGLISH -> {
+                "Wake up! You have arrived at $destinationName."
+            }
+        }
+
+        if (isInitialized && tts != null) {
+            // Use QUEUE_ADD to not interrupt any currently playing approach alert if they triggered at the same time
+            tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "TravelAlarmTTS_Arrival_${System.currentTimeMillis()}")
+        } else {
+            pendingSpeechText = text
+        }
+    }
+
     fun stop() {
         pendingSpeechText = null
         try {
