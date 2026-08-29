@@ -232,6 +232,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
+        // Handle Custom Destination Name changes in real-time
+        binding.etDestName.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val customName = s?.toString()?.trim() ?: ""
+                if (customName.isNotEmpty()) {
+                    val prefs = getSharedPreferences("travel_alarm_prefs", Context.MODE_PRIVATE)
+                    prefs.edit().putString("PREF_DEST_NAME", customName).apply()
+                    if (isCurrentlyTracking) {
+                        LocationTrackingService.updateDestinationName(this@MainActivity, customName)
+                    }
+                }
+            }
+        })
+
         // 0. Drag-down Swipe to Refresh GPS & Location Status
         binding.swipeRefreshLayout.setColorSchemeResources(R.color.primary, R.color.primary_light, R.color.accent)
         binding.swipeRefreshLayout.setOnRefreshListener {

@@ -355,6 +355,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Selected Destination Name"
+                        app:helperText="Edit this for custom voice announcements (e.g. 'Home')"
+                        app:helperTextTextColor="@color/text_secondary"
                         app:boxStrokeColor="@color/primary_light"
                         app:hintTextColor="@color/primary_light"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">

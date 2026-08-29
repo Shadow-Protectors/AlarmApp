@@ -37,6 +37,7 @@ class LocationTrackingService : Service() {
         const val ACTION_STOP = "com.shadowprotectors.alarmapp.ACTION_STOP"
         const val ACTION_STOP_ALARM = "com.shadowprotectors.alarmapp.ACTION_STOP_ALARM"
         const val ACTION_UPDATE_LANGUAGE = "com.shadowprotectors.alarmapp.ACTION_UPDATE_LANGUAGE"
+        const val ACTION_UPDATE_DEST_NAME = "com.shadowprotectors.alarmapp.ACTION_UPDATE_DEST_NAME"
 
         const val EXTRA_DEST_NAME = "EXTRA_DEST_NAME"
         const val EXTRA_DEST_LAT = "EXTRA_DEST_LAT"
@@ -64,6 +65,14 @@ class LocationTrackingService : Service() {
             val intent = Intent(context, LocationTrackingService::class.java).apply {
                 action = ACTION_UPDATE_LANGUAGE
                 putExtra(EXTRA_LANG_CODE, langCode)
+            }
+            context.startService(intent)
+        }
+
+        fun updateDestinationName(context: Context, newName: String) {
+            val intent = Intent(context, LocationTrackingService::class.java).apply {
+                action = ACTION_UPDATE_DEST_NAME
+                putExtra(EXTRA_DEST_NAME, newName)
             }
             context.startService(intent)
         }
@@ -146,6 +155,13 @@ class LocationTrackingService : Service() {
                     "ta" -> SupportedLanguage.TAMIL
                     "hi" -> SupportedLanguage.HINDI
                     else -> SupportedLanguage.ENGLISH
+                }
+            }
+            ACTION_UPDATE_DEST_NAME -> {
+                val newName = intent.getStringExtra(EXTRA_DEST_NAME)
+                if (!newName.isNullOrBlank()) {
+                    destinationName = newName
+                    lastNotifiedDistanceKm = Double.MAX_VALUE // trigger notification update
                 }
             }
             ACTION_STOP_ALARM -> {
