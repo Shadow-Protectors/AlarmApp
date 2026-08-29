@@ -189,9 +189,35 @@ class MapPickerBottomSheet : BottomSheetDialogFragment() {
         }
 
         binding.btnConfirmDestination.setOnClickListener {
-            listener?.onDestinationSelected(currentPlaceName, currentCenterLat, currentCenterLng)
-            dismiss()
+            showNameInputDialog()
         }
+    }
+
+    private fun showNameInputDialog() {
+        val context = requireContext()
+        val input = com.google.android.material.textfield.TextInputEditText(context).apply {
+            setText(currentPlaceName)
+            setSelection(text?.length ?: 0)
+            hint = "e.g. Home, Office"
+            setSingleLine(true)
+        }
+        val layout = android.widget.FrameLayout(context).apply {
+            val padding = (24 * context.resources.displayMetrics.density).toInt()
+            setPadding(padding, padding / 2, padding, 0)
+            addView(input)
+        }
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+            .setTitle("Name this location")
+            .setView(layout)
+            .setPositiveButton("Save") { _, _ ->
+                val customName = input.text.toString().trim()
+                val finalName = if (customName.isNotEmpty()) customName else currentPlaceName
+                listener?.onDestinationSelected(finalName, currentCenterLat, currentCenterLng)
+                dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun fetchInitialLocation() {
