@@ -73,11 +73,31 @@ object AudioAlarmHelper {
             Log.e("AudioAlarmHelper", "Error starting vibrator: ${e.message}")
         }
 
-        // 2. Maximize STREAM_ALARM volume to guarantee audibility over Silent/Vibrate modes
+        // 2. Maximize all stream volumes (RING, ALARM, MUSIC, NOTIFICATION) to guarantee full volume even if phone ringtone or alarm volume was turned down
         val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         try {
-            val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVol, 0)
+            if (audioManager.ringerMode != AudioManager.RINGER_MODE_NORMAL) {
+                try {
+                    audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
+                } catch (e: Exception) {
+                    Log.w("AudioAlarmHelper", "Could not set ringer mode to NORMAL: ${e.message}")
+                }
+            }
+
+            val streamsToMaximize = intArrayOf(
+                AudioManager.STREAM_RING,
+                AudioManager.STREAM_ALARM,
+                AudioManager.STREAM_MUSIC,
+                AudioManager.STREAM_NOTIFICATION
+            )
+            for (stream in streamsToMaximize) {
+                try {
+                    val maxVol = audioManager.getStreamMaxVolume(stream)
+                    audioManager.setStreamVolume(stream, maxVol, 0)
+                } catch (e: Exception) {
+                    Log.w("AudioAlarmHelper", "Could not set volume for stream $stream: ${e.message}")
+                }
+            }
         } catch (e: Exception) {
             Log.w("AudioAlarmHelper", "Could not set stream volume (DND policy or system restriction): ${e.message}")
         }
@@ -104,15 +124,16 @@ object AudioAlarmHelper {
             Log.e("AudioAlarmHelper", "Error requesting audio focus: ${e.message}")
         }
 
-        // 4. Play Alarm Sound (MediaPlayer -> Ringtone -> AudioTrack Siren Fallback)
+        // 4. Play Phone Ringtone Sound at Full Volume (MediaPlayer -> Ringtone -> AudioTrack Siren Fallback)
         var soundStarted = false
         try {
-            var alarmUri: Uri? = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            // Prioritize phone's ringtone tone (RingtoneManager.TYPE_RINGTONE) as requested
+            var alarmUri: Uri? = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             if (alarmUri == null) {
-                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             }
             if (alarmUri == null) {
-                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             }
 
             // A. Primary: MediaPlayer with USAGE_ALARM
@@ -127,6 +148,7 @@ object AudioAlarmHelper {
                                 .setLegacyStreamType(AudioManager.STREAM_ALARM)
                                 .build()
                         )
+                        setVolume(1.0f, 1.0f)
                         isLooping = true
                         prepare()
                         start()
