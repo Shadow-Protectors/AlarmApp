@@ -58,6 +58,7 @@ ehthumbs.db
 
 # Documentation / Internal Plans / Agent files
 plan/
-*.md
 .agents/
 graphify-out/
+!README.md
+!VERSION_LOG.md
